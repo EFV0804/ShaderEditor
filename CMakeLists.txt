@@ -1,14 +1,11 @@
-cmake_minimum_required(VERSION 3.23)
-project(shaderEditor)
-set(CMAKE_CXX_STANDARD 17)
+add_subdirectory(glfw)
+add_subdirectory(glm)
+add_subdirectory(vma)
 
-add_subdirectory(src)
-add_subdirectory(externals)
 
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-
-#add_subdirectory(externals/glfw)
-#add_subdirectory(externals/glm)
-#add_subdirectory(externals/vma)
+message("generating vma")
+file(GLOB VMA_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/vma/*.h ${CMAKE_CURRENT_SOURCE_DIR}/vma/*.hpp)
+message(${VMA_SRC_FILES})
+add_library(vma INTERFACE ${VMA_SRC_FILES})
+target_include_directories(vma INTERFACE vma)
+set_target_properties(vma PROPERTIES LINKER_LANGUAGE CXX)
