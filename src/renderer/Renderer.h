@@ -7,8 +7,7 @@
 #include <array>
 #include "VkUtilities.h"
 #include "Buffer.h"
-#include <vk_mem_alloc.hpp>
-
+#include "Allocator.h"
 class Renderable;
 
 class Renderer
@@ -32,7 +31,7 @@ public:
     vk::PhysicalDevice physicalDevice;
     vk::Device device;
     vk::PhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
-    vma::Allocator allocator;
+    Allocator allocator;
 
 
     // QUEUES

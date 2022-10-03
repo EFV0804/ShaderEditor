@@ -4,10 +4,16 @@
 
 #ifndef SHADEREDITOR_BUFFER_H
 #define SHADEREDITOR_BUFFER_H
-#include <Vulkan/vulkan.hpp>
-#include <vk_mem_alloc.hpp>
+//#include <Vulkan/vulkan.hpp>
+//#include <vk_mem_alloc.hpp>
+#include "Allocator.h"
+#include <memory>
 
 class Renderer;
+
+namespace vma{
+    class Allocation;
+}
 
 enum BufferState{
     Empty,
@@ -22,16 +28,16 @@ public:
     Buffer() = default;
     ~Buffer();
 //    void createBuffer();
-    void load(vma::Allocator* allocator);
-    void map(vma::Allocator* allocator, void* data);
-    void unMap(vma::Allocator* allocator);
+    void load(Renderer* renderer);
+    void map(Renderer* renderer, void* data);
+    void unMap(Renderer* renderer);
 //    void allocate(vk::MemoryAllocateInfo memoryAllocateInfo);
 //    void copyTo();
 //    void bind();
 //    void lockMem();
 //    void unlockMem();
     vk::BufferCreateInfo getBufferCreateInfo();
-    vk::Buffer getBuffer(){return buffer;}
+    vk::Buffer& getBuffer(){return *buffer;}
 
 private:
 //    Renderer* renderer;
@@ -39,9 +45,9 @@ private:
     vk::BufferCreateInfo info;
     BufferState state {BufferState::Empty};
     uint64_t size;
-    vk::Buffer buffer;
+    std::unique_ptr<vk::Buffer> buffer;
     vk::DeviceMemory bufferMemory;
-    vma::Allocation allocation;
+    std::unique_ptr<vma::Allocation> allocation;
 };
 
 

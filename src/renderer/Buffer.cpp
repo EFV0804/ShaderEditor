@@ -21,19 +21,31 @@ void Buffer::load(vma::Allocator* allocator) {
     info = getBufferCreateInfo();
 //    createBuffer();
 
-    vma::AllocationCreateInfo vmaAllocInfo = {};
-    vmaAllocInfo.usage = vma::MemoryUsage::eCpuToGpu;
+    vma::AllocationCreateInfo vmaAllocCreateInfo = {};
+    vmaAllocCreateInfo.usage = vma::MemoryUsage::eCpuToGpu;
+//    vmaAllocCreateInfo.requiredFlags = vk::MemoryPropertyFlagBits::eHostVisible;
 
-    allocator->createBuffer( &info,
-                                      &vmaAllocInfo,
-                                      &buffer,
-                                      &allocation,
-                                      nullptr);
+
+//    vma::AllocationInfo allocInfo = {};
+//    allocInfo.deviceMemory = renderer->device;
+//    allocInfo.memoryType = nullptr;
+
+//    renderer->allocator.getAllocationInfo(allocation);
+
+//    vmaGetAllocatorInfo(renderer->allocator, renderer->allocator.getAllocatorInfo());
+    vma::AllocationInfo allocInfo = {};
+    allocator->createBuffer(info, allocInfo);
+//    allocator->createBuffer( &info,
+//                                      &vmaAllocInfo,
+//                                      &buffer,
+//                                      &allocation,
+//                                      nullptr);
 
 }
 
 void Buffer::map(vma::Allocator* allocator, void* data){
-    allocator->mapMemory(allocation, &data);
+//    allocator->mapMemory(allocation, &data);
+    allocator->mapMemory(allocation);
 
 }
 

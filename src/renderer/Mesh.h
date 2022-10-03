@@ -8,7 +8,6 @@
 #include <vulkan/vulkan.hpp>
 #include <vector>
 #include <stddef.h>
-#include <vk_mem_alloc.hpp>
 
 class Buffer;
 
@@ -36,7 +35,7 @@ public:
             {{-0.4, 0.4, 0.0}, {0.0, 0.0, 1.0}}
     };
     uint64_t getSize(){return vertices.size() * sizeof(Vertex);}
-    void upload(vma::Allocator* allocator, Buffer* vertexBuffer);
+    void upload( Buffer* vertexBuffer);
 
 };
 

@@ -33,12 +33,18 @@ VertexInputDescription Vertex::getVertexInputDescription(){
     return description;
 }
 
-void Mesh::upload(vma::Allocator* allocator, Buffer* vertexBuffer) {
+void Mesh::upload(Buffer* vertexBuffer) {
 
     // TODO copy vertices into given vertex buffer (vertex buffer is owned by renderer)
-    void* data;
-    vertexBuffer->map(allocator, &data);
-    memcpy(data, vertices.data(), getSize());
-    vertexBuffer->unMap(allocator);
+
+    // use abstraction
+    // call Buffer copy or fill or relevant Buffer func
+
+
+
+//    void* data;
+//    vertexBuffer->map(allocator, &data);
+//    memcpy(data, vertices.data(), getSize());
+//    vertexBuffer->unMap(allocator);
 
 }

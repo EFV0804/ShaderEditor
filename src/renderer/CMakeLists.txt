@@ -5,8 +5,8 @@ file(GLOB ENGINE_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOU
 message("generating renderer")
 #message(${ENGINE_SRC_FILES})
 
-# make renderer librasry
-add_library(renderer SHARED ${ENGINE_SRC_FILES})
+# make renderer library
+add_library(renderer SHARED ${ENGINE_SRC_FILES} Allocator.cpp Allocator.h)
 # include current source to library
 target_include_directories(renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
