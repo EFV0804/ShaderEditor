@@ -28,7 +28,7 @@ void Scene::load(Renderer* renderer) {
 }
 
 void Scene::draw(Renderer* renderer){
-    renderer->draw(&renderables);
+    renderer->draw(renderables);
 }
 
 void Scene::close() {

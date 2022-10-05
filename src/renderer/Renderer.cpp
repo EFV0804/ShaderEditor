@@ -7,6 +7,7 @@
 
 Renderer::Renderer()
 {
+
 }
 
 Renderer::~Renderer()
@@ -24,14 +25,15 @@ int Renderer::init()
         setPhysicalDevice();
         setQueueFamilyIndices();
         createLogicalDevice();
-        createMemoryAllocator();
+//        createMemoryAllocator();
         createQueues();
         createSwapchain();
         createRenderPass();
         createFramebuffers();
-//        createVertexBuffer();
-        createGraphicsCommandBuffer();
-        createSynchronisation();
+        createVertexBuffer();
+        createCommandBuffers();
+        createSyncStructures();
+//        createSynchronisation();
 
     }
     catch (const std::runtime_error& e)
@@ -44,24 +46,26 @@ int Renderer::init()
     
 }
 // RUN
-void Renderer::draw(std::vector<Renderable>* renderables)
+void Renderer::draw(std::vector<Renderable> renderables)
 {
     // BEGIN FRAME
-    device.waitForFences(drawFences[currentFrame], VK_TRUE, std::numeric_limits<uint32_t>::max());
-    device.resetFences(drawFences[currentFrame]);
+    device.waitForFences(getCurrentFrame().renderFence, VK_TRUE, 1000000000);
+    device.resetFences(getCurrentFrame().renderFence);
+    getCurrentFrame().commandBuffer.reset();
+
     uint32_t imageToBeDrawnIndex;
 
     vk::ResultValue result = device.acquireNextImageKHR(swapchain,
-                                                        std::numeric_limits<uint32_t>::max(),
-                                                        semaphores.imageAvailable[currentFrame],
+                                                        1000000000,
+                                                        getCurrentFrame().presentSemaphore,
                                                         VK_NULL_HANDLE);
     imageToBeDrawnIndex = result.value;
 
     // BEGIN COMMAND INFO
-
-
     vk::CommandBufferBeginInfo commandBufferBeginInfo{};
     commandBufferBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
+    commandBufferBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+    getCurrentFrame().commandBuffer.begin(commandBufferBeginInfo);
 
     // RENDERPASS BEGIN
     vk::RenderPassBeginInfo renderPassBeginInfo{};
@@ -70,6 +74,7 @@ void Renderer::draw(std::vector<Renderable>* renderables)
     renderPassBeginInfo.renderArea.offset.x = 0;
     renderPassBeginInfo.renderArea.offset.y = 0;
     renderPassBeginInfo.renderArea.extent = swapchainExtent;
+    renderPassBeginInfo.framebuffer = swapchainFramebuffers.at(imageToBeDrawnIndex);
 
     const vk::ClearValue clearValues{
             std::array<float,4>{0.f, 0.f, .4f, 1.0f}
@@ -78,69 +83,61 @@ void Renderer::draw(std::vector<Renderable>* renderables)
     renderPassBeginInfo.pClearValues = &clearValues;
     renderPassBeginInfo.clearValueCount = 1;
 
+    getCurrentFrame().commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-    for (size_t i = 0; i < commandBuffers.size(); ++i)
-    {
+    // DRAW OBJECTS
+    drawRenderables(renderables);
+    // RENDERPASS END
+    getCurrentFrame().commandBuffer.endRenderPass();
+    // ADD COMMAND BUFFER
+    getCurrentFrame().commandBuffer.end();
 
-        renderPassBeginInfo.framebuffer = swapchainFramebuffers[i];
-        commandBuffers[i].begin(commandBufferBeginInfo);
-        commandBuffers[i].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-        for(auto renderable : *renderables) {
-            // Bind the pipeline with command buffer renderables renderable.material.pipeline
-            commandBuffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, renderable.material->pipeline->getPipeline());
+    // SUBMIT INFO
+    vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
-            vk::DeviceSize offsets[] = {0};
-            vk::Buffer vertexBuffers[] = {vertexBuffer.getBuffer()};
-
-            commandBuffers[i].bindVertexBuffers(0, 1, vertexBuffers, offsets);
-            commandBuffers[i].draw(renderable.mesh->vertices.size(), 1, 0, 0);
-
-        }
-        commandBuffers[i].endRenderPass();
-        commandBuffers[i].end();
-    }
-
-
-//    store all semaphore into an array
     vk::SubmitInfo submitInfo{};
     submitInfo.sType = vk::StructureType::eSubmitInfo;
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &semaphores.imageAvailable[currentFrame];
-
-    vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
-
-//    Add semaphores to the wait and signal vectors.
-    semaphores.graphicsSignalSemaphores.push_back(semaphores.graphics);
-    for (int i = 0; i < semaphores.renderFinished.size(); ++i)
-    {
-        semaphores.graphicsSignalSemaphores.push_back(semaphores.renderFinished[i]);
-    }
-    for (int i = 0; i < semaphores.imageAvailable.size(); ++i)
-    {
-        semaphores.graphicsWaitSemaphores.push_back(semaphores.imageAvailable[i]);
-    }
-
+    submitInfo.pWaitSemaphores = &getCurrentFrame().presentSemaphore;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffers[imageToBeDrawnIndex];
+    submitInfo.pCommandBuffers = &getCurrentFrame().commandBuffer;
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &semaphores.renderFinished[currentFrame];
+    submitInfo.pSignalSemaphores = &getCurrentFrame().renderSemaphore;
 
-    graphicsQueue.submit(submitInfo, drawFences[currentFrame]);
+    graphicsQueue.submit(submitInfo, getCurrentFrame().renderFence);
 
+
+    // PRESENTATION
     vk::PresentInfoKHR presentInfo{};
     presentInfo.sType = vk::StructureType::ePresentInfoKHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &semaphores.renderFinished[currentFrame];
+    presentInfo.pWaitSemaphores =  &getCurrentFrame().renderSemaphore;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &swapchain;
     presentInfo.pImageIndices = &imageToBeDrawnIndex;
 
-    presentationQueue.presentKHR(presentInfo);
+    graphicsQueue.presentKHR(presentInfo);
 
+    //NEXT FRAME INCREMENT
     currentFrame = (currentFrame + 1) % MAX_FRAME_DRAWS;
 }
 
+void Renderer::drawRenderables(std::vector<Renderable> renderables){
+    //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
+
+    Material* lastMaterial = nullptr;
+
+    for(auto renderable : renderables){
+        if(renderable.material != lastMaterial){
+            vk::Pipeline pipeline = renderable.material->pipeline->getPipeline();
+            getCurrentFrame().commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+            lastMaterial = renderable.material;
+        }
+
+    }
+
+}
 // INIT
 void Renderer::createWindow() {
     std::string name = "The Best Window";
@@ -284,24 +281,39 @@ void Renderer::createSwapchain()
     }
 }
 
-void Renderer::createGraphicsCommandBuffer()
+void Renderer::createCommandBuffers()
 {
-    // TODO Refactor into Buffer class
 
     vk::CommandPoolCreateInfo poolInfo{};
     poolInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+    poolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
 
-    commandPool = device.createCommandPool(poolInfo);
+    for(int i = 0; i < MAX_FRAME_DRAWS; i++){
+        FrameData frame;
+        frame.commandPool = device.createCommandPool(poolInfo);
+        vk::CommandBufferAllocateInfo commandBufferAllocInfo{};
+        commandBufferAllocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
+        commandBufferAllocInfo.commandPool = frame.commandPool;
+        commandBufferAllocInfo.commandBufferCount = 1;
+        commandBufferAllocInfo.level = vk::CommandBufferLevel::ePrimary;
 
-    commandBuffers.resize(swapchainFramebuffers.size());
-    vk::CommandBufferAllocateInfo commandBufferAllocInfo{};
-    commandBufferAllocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
-    commandBufferAllocInfo.commandPool = commandPool;
-    commandBufferAllocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
-    commandBufferAllocInfo.level = vk::CommandBufferLevel::ePrimary;
+        frame.commandBuffer = device.allocateCommandBuffers(commandBufferAllocInfo).at(0);
+        frames.emplace_back(frame);
+    }
+}
 
-    commandBuffers = device.allocateCommandBuffers(commandBufferAllocInfo);
+void Renderer::createSyncStructures() {
+    vk::FenceCreateInfo fenceCreateInfo = {};
+
+    vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
+
+    for(int i = 0; i < MAX_FRAME_DRAWS; i++){
+        frames.at(i).renderFence = device.createFence(fenceCreateInfo);
+        frames.at(i).presentSemaphore = device.createSemaphore(semaphoreCreateInfo);
+        frames.at(i).renderSemaphore = device.createSemaphore(semaphoreCreateInfo);
+    }
+
 }
 
 void Renderer::createRenderPass()
@@ -613,53 +625,86 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
 void Renderer::cleanUp()
 {
     device.waitIdle();
-    instance.destroySurfaceKHR(surface);
-    device.destroy();
-    instance.destroy();
-//    device.destroyRenderPass(renderPass);
-//    for (auto framebuffer : swapchainFramebuffers)
-//    {
-//        device.destroyFramebuffer(framebuffer);
-//    }
+
     device.destroySwapchainKHR(swapchain);
-    device.destroyCommandPool(commandPool);
+    instance.destroySurfaceKHR(surface);
+
+    for(auto frame : frames){
+        device.destroyCommandPool(frame.commandPool);
+        device.destroyFence(frame.renderFence);
+        device.destroySemaphore(frame.presentSemaphore);
+        device.destroySemaphore(frame.renderSemaphore);
+    }
     for (auto image : swapchainImages)
     {
         device.destroyImageView(image.imageView);
     }
-    for (size_t i = 0; i < MAX_FRAME_DRAWS; ++i)
+
+    for (auto framebuffer : swapchainFramebuffers)
     {
-        device.destroySemaphore(semaphores.renderFinished[i]);
-        device.destroySemaphore(semaphores.imageAvailable[i]);
-        device.destroyFence(drawFences[i]);
+        device.destroyFramebuffer(framebuffer);
     }
-//    for (auto framebuffer : swapchainFramebuffers)
-//    {
-//        device.destroyFramebuffer(framebuffer);
-//    }
     device.destroyRenderPass(renderPass);
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    device.freeMemory(vertexBuffer.bufferMemory);
+    device.destroyBuffer(vertexBuffer.getBuffer());
+    vertexBuffer.~Buffer();
+    device.destroy();
+    instance.destroy();
 }
 
-void Renderer::loadMeshes(std::vector<Renderable>* renderables){
-    for(auto renderable : *renderables){
-        renderable.mesh->upload(&allocator, &vertexBuffer);
-    }
-}
-
-void Renderer::createMemoryAllocator() {
-    //initialize the memory allocator
-    vma::AllocatorCreateInfo allocatorInfo = {};
-    allocatorInfo.physicalDevice = physicalDevice;
-    allocatorInfo.device = device;
-    allocatorInfo.instance = instance;
-    vk::Result result = vma::createAllocator(&allocatorInfo, &allocator);
+void Renderer::loadMeshes(std::vector<Renderable> renderables){
+    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
+//    vertexBuffer.map(this, 0);
+    struct Vertex {
+        glm::vec3 pos;
+        glm::vec3 color;
+    };
+    const std::vector<Vertex> vertices = {
+            {{0.0, -0.4, 0.0}, {1.0, 0.0, 0.0}},
+            {{0.4, 0.4, 0.0}, {0.0, 1.0, 0.0}},
+            {{-0.4, 0.4, 0.0}, {0.0, 0.0, 1.0}}
+    };
+    auto bufferStart = static_cast<float*>(device.mapMemory(*vertexBuffer.getDeviceMemory(), 0, 3*sizeof(Vertex)));
+    memcpy(bufferStart, vertices.data(), 3*sizeof(Vertex));
+    vertexBuffer.unMap(this);
+//    for(auto renderable : renderables){
+//
+//    }
 }
 
 void Renderer::createVertexBuffer(){
-    vk::BufferUsageFlags usage = {vk::BufferUsageFlagBits::eVertexBuffer};
-    //hopefully 32mb of vertex buffer
-    Buffer vertexBuffer {vk::BufferUsageFlagBits::eVertexBuffer, 500000};
-    vertexBuffer.load(&allocator);
+    vertexBuffer = Buffer(&device, vk::BufferUsageFlags {vk::BufferUsageFlagBits::eVertexBuffer}, 500000);
+
+    uint32_t memoryTypeIndex = getMemoryTypeIndex();
+    vertexBuffer.load(this,memoryTypeIndex);
+    vertexBuffer.allocate(memoryTypeIndex, this);
+    vertexBuffer.bind(this);
+
+}
+
+uint32_t Renderer::getMemoryTypeIndex() {
+
+    vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDevice.getMemoryProperties();
+
+    uint32_t memoryTypeIndex = uint32_t(~0);
+    // TODO make sure it's big enough for buffer requested size
+//    vk::DeviceSize memoryHeapSize = uint32_t(~0);
+
+// TODO add MemoryPropertyFlags as parameters. Use switch case to determine, based on passed buffer usage?
+    for (uint32_t currentMemoryTypeIndex = 0; currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex) {
+        vk::MemoryType memoryType = memoryProperties.memoryTypes[currentMemoryTypeIndex];
+        if ((vk::MemoryPropertyFlagBits::eHostVisible & memoryType.propertyFlags) &&
+            (vk::MemoryPropertyFlagBits::eHostCoherent & memoryType.propertyFlags)) {
+//            memoryHeapSize = memoryProperties.memoryHeaps[memoryType.heapIndex].size;
+            return currentMemoryTypeIndex;
+        }
+    }
+    return memoryTypeIndex;
+}
+
+Renderer::FrameData &Renderer::getCurrentFrame() {
+    return frames.at(currentFrame % MAX_FRAME_DRAWS);
 }

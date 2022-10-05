@@ -7,7 +7,6 @@
 #include <array>
 #include "VkUtilities.h"
 #include "Buffer.h"
-#include "Allocator.h"
 class Renderable;
 
 class Renderer
@@ -31,7 +30,6 @@ public:
     vk::PhysicalDevice physicalDevice;
     vk::Device device;
     vk::PhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
-    Allocator allocator;
 
 
     // QUEUES
@@ -64,14 +62,25 @@ public:
 
 
     // COMMANDS
+    int currentFrame = 0;
+    struct FrameData{
+        vk::Semaphore presentSemaphore, renderSemaphore;
+        vk::Fence renderFence;
+        vk::CommandPool commandPool;
+        vk::CommandBuffer commandBuffer;
+    };
+    static constexpr int MAX_FRAME_DRAWS = 2;
+    std::vector<FrameData> frames;
+    FrameData& getCurrentFrame();
+
     std::vector<vk::Framebuffer> swapchainFramebuffers;
 //    vk::Framebuffer framebuffer;
-    vk::CommandPool commandPool;
-    vector<vk::CommandBuffer> commandBuffers;
+//    vk::CommandPool commandPool;
+//    vector<vk::CommandBuffer> commandBuffers;
 //    vk::CommandBuffer commandBuffer;
-    const int MAX_FRAME_DRAWS = 2;
-    int currentFrame = 0;
-    Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer, 500000};
+
+
+    Buffer vertexBuffer;
 //    std::vector<Renderable>* renderables;
 
     // GETTERS
@@ -80,9 +89,12 @@ public:
 
     // RUN
     int init();
-	void draw(std::vector<Renderable>* renderables);
+	void draw(std::vector<Renderable> renderables);
+    void drawRenderables(std::vector<Renderable> renderables);
 	void cleanUp();
-    void loadMeshes(std::vector<Renderable>* renderables);
+    void loadMeshes(std::vector<Renderable> renderables);
+
+    uint32_t getMemoryTypeIndex();
 
 private:
 
@@ -96,11 +108,12 @@ private:
     // INIT
     void createWindow();
 	void createInstance();
-    void createMemoryAllocator();
+//    void createMemoryAllocator();
     void createLogicalDevice();
     void createQueues();
     void createSwapchain();
-    void createGraphicsCommandBuffer();
+    void createCommandBuffers();
+    void createSyncStructures();
     void createVertexBuffer();
 
     // SETTERS

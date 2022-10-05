@@ -4,16 +4,15 @@
 
 #ifndef SHADEREDITOR_BUFFER_H
 #define SHADEREDITOR_BUFFER_H
-//#include <Vulkan/vulkan.hpp>
+#include <Vulkan/vulkan.hpp>
 //#include <vk_mem_alloc.hpp>
-#include "Allocator.h"
-#include <memory>
+ #include <memory>
 
 class Renderer;
 
-namespace vma{
-    class Allocation;
-}
+//namespace vma{
+//    class Allocation;
+//}
 
 enum BufferState{
     Empty,
@@ -24,30 +23,35 @@ enum BufferState{
 
 class Buffer {
 public:
-    Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize);
+    Buffer(vk::Device* pDevice, vk::BufferUsageFlags pUsage, uint64_t pSize);
     Buffer() = default;
+
     ~Buffer();
-//    void createBuffer();
-    void load(Renderer* renderer);
-    void map(Renderer* renderer, void* data);
-    void unMap(Renderer* renderer);
-//    void allocate(vk::MemoryAllocateInfo memoryAllocateInfo);
-//    void copyTo();
-//    void bind();
+    void createBuffer();
+    void load(Renderer* renderer, uint32_t memoryTypeIndex);
+    void map(Renderer *renderer, int offset);
+    void unMap(Renderer *renderer);
+    void allocate(uint32_t memoryTypeIndex, Renderer *renderer);
+    void write();
+    void bind(Renderer *renderer, int memoryOffest = 0);
 //    void lockMem();
 //    void unlockMem();
-    vk::BufferCreateInfo getBufferCreateInfo();
-    vk::Buffer& getBuffer(){return *buffer;}
+    vk::BufferCreateInfo getBufferCreateInfo(Renderer* renderer);
+    vk::Buffer& getBuffer(){return buffer;}
+    vk::BufferUsageFlags usage;
+    float* bufferStart = nullptr;
+    uint64_t size;
+    vk::DeviceMemory* getDeviceMemory(){return &bufferMemory;}
+    vk::DeviceMemory bufferMemory;
 
 private:
-//    Renderer* renderer;
-    vk::BufferUsageFlags usage;
     vk::BufferCreateInfo info;
     BufferState state {BufferState::Empty};
-    uint64_t size;
-    std::unique_ptr<vk::Buffer> buffer;
-    vk::DeviceMemory bufferMemory;
-    std::unique_ptr<vma::Allocation> allocation;
+    vk::Buffer buffer;
+    vk::MemoryAllocateInfo memoryAllocateInfo;
+    vk::Device* device;
+
+//    std::unique_ptr<vma::Allocation> allocation;
 };
 
 

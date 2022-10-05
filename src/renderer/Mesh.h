@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 #include <vector>
-#include <stddef.h>
+#include <cstddef>
 
 class Buffer;
 
@@ -27,7 +27,7 @@ public:
     Mesh() = default;
     ~Mesh() = default;
 
-    const uint32_t numElements = 3;
+//    const int numElements = 3;
 
     const std::vector<Vertex> vertices = {
             {{0.0, -0.4, 0.0}, {1.0, 0.0, 0.0}},

@@ -2,7 +2,7 @@
 #include "Renderer.h"
 #include "Mesh.h"
 
-GraphicsPipeline::GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo> stages)
+GraphicsPipeline::GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>* stages)
 {
     createGraphicsPipeline(renderer, stages);
 }
@@ -13,17 +13,17 @@ void GraphicsPipeline::destroy(Renderer* renderer)
     renderer->device.destroyPipeline(graphicsPipeline);
 }
 
-void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo> stages)
+void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>* stages)
 {
 
     // Get Vertex State Input Info
-    VertexInputDescription description = Vertex::getVertexInputDescription();
+    VertexInputDescription descriptions = Vertex::getVertexInputDescription();
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
-    vertexInputInfo.pVertexAttributeDescriptions = description.attributesDescriptions.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = description.attributesDescriptions.size();
-    vertexInputInfo.pVertexBindingDescriptions = description.bindingsDescriptions.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = description.bindingsDescriptions.size();
+    vertexInputInfo.pVertexAttributeDescriptions = descriptions.attributesDescriptions.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(descriptions.attributesDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = descriptions.bindingsDescriptions.data();
+    vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(descriptions.bindingsDescriptions.size());
 
 
     // Get Input Assembly State Info
@@ -112,8 +112,8 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     vk::GraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = vk::StructureType::eGraphicsPipelineCreateInfo;
     pipelineInfo.pNext = nullptr;
-    pipelineInfo.stageCount = stages.size();
-    pipelineInfo.pStages = stages.data();
+    pipelineInfo.stageCount = stages->size();
+    pipelineInfo.pStages = stages->data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
     pipelineInfo.pViewportState = &viewportInfo;

@@ -17,8 +17,8 @@ void Material::addShader(vk::Device device, std::string filename, vk::ShaderStag
 }
 
 void Material::addPipeline(Renderer* renderer){
-    auto shaderStages = getShaderStages();
-    std::shared_ptr<GraphicsPipeline> pipelinePtr (new GraphicsPipeline(renderer, shaderStages));
+    std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = getShaderStages();
+    std::shared_ptr<GraphicsPipeline> pipelinePtr (new GraphicsPipeline(renderer, &shaderStages));
     pipeline = pipelinePtr;
 }
 std::vector<vk::PipelineShaderStageCreateInfo> Material::getShaderStages(){

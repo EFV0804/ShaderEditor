@@ -7,7 +7,7 @@ class Renderer;
 class GraphicsPipeline
 {
 public:
-    GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo> stages);
+    GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>* stages);
     GraphicsPipeline() = default;
 	~GraphicsPipeline() = default;
 
@@ -22,7 +22,7 @@ private:
 
 //	vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
 	void addShaders();
-    void createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo> stages);
+    void createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>* stages);
 
 };
 

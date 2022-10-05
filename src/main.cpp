@@ -1,5 +1,4 @@
 #define GLFW_INCLUDE_NONE
-#define VMA_IMPLEMENTATION
 #include <GLFW/glfw3.h>
 #include "Renderer.h"
 #include <string>
@@ -10,16 +9,16 @@ int main() {
 
 //    std::cout<<"test"<<std::endl;
 
-    Renderer renderer = Renderer();
+    Renderer renderer;
     if (renderer.init() == EXIT_FAILURE) return EXIT_FAILURE;
     Scene sceneExample = Scene();
     sceneExample.load(&renderer);
-    renderer.loadMeshes(&sceneExample.renderables);
+    renderer.loadMeshes(sceneExample.renderables);
 
     while (!glfwWindowShouldClose(renderer.window))
     {
         glfwPollEvents();
-        sceneExample.draw(&renderer);
+//        sceneExample.draw(&renderer);
     }
 
     renderer.cleanUp();
