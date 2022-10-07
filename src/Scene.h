@@ -16,6 +16,7 @@ public:
     std::vector<Renderable> renderables;
     void load(Renderer* renderer);
     void draw(Renderer* renderer);
+    Material createMaterial(std::vector<std::string> shaderNames, Renderer* renderer);
     void close();
 };
 

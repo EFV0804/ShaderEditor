@@ -3,23 +3,37 @@
 //
 
 #include "Material.h"
+#include "Renderer.h"
+#include <utility>
 
-Material::Material(){
-
+Material::Material(std::vector<ShaderInfo> shadersInfo, Renderer* renderer){
+    addShaders(renderer, shadersInfo);
+    addPipeline(renderer);
 }
 Material::~Material() {
 
 }
 
-void Material::addShader(vk::Device device, std::string filename, vk::ShaderStageFlagBits stage){
-    std::shared_ptr<Shader> shader(new Shader(device, filename, stage));
-    shaders.emplace_back(shader);
+void Material::addShaders(Renderer* renderer, std::vector<ShaderInfo> shadersInfo){
+
+    for(auto shaderInfo : shadersInfo){
+        Shader shader{renderer->device, shaderInfo.fileName, shaderInfo.stage};
+        shaders.emplace_back(&shader);
+    }
+
+
+}
+
+void Material::addShader(vk::Device device, std::string filename, vk::ShaderStageFlagBits stage) {
+
+    Shader shader{device, filename, stage};
+    shaders.emplace_back(&shader);
 }
 
 void Material::addPipeline(Renderer* renderer){
     std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = getShaderStages();
-    std::shared_ptr<GraphicsPipeline> pipelinePtr (new GraphicsPipeline(renderer, &shaderStages));
-    pipeline = pipelinePtr;
+    pipeline = GraphicsPipeline(renderer, shaderStages);
+
 }
 std::vector<vk::PipelineShaderStageCreateInfo> Material::getShaderStages(){
 

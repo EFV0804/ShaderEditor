@@ -9,20 +9,24 @@
 #include <vector>
 #include <memory>
 
+struct ShaderInfo{
+    std::string fileName;
+    vk::ShaderStageFlagBits stage;
+};
+
 class Material {
 public:
-    Material();
+    Material(std::vector<ShaderInfo>, Renderer* renderer);
+    Material() = default;
     ~Material();
 
-    std::vector<std::shared_ptr<Shader>> shaders;
-    std::shared_ptr<GraphicsPipeline> pipeline;
+    std::vector<Shader*> shaders;
+    GraphicsPipeline pipeline;
 
-    //Function to assign material with object
-    //  void use();
-    void addShader(vk::Device device, std::string filename,vk::ShaderStageFlagBits stage);
+    void addShaders(Renderer* renderer, std::vector<ShaderInfo> shadersInfo);
+    void addShader(vk::Device device, std::string filename, vk::ShaderStageFlagBits stage);
     void addPipeline(Renderer* renderer);
     std::vector<vk::PipelineShaderStageCreateInfo> getShaderStages();
-    void init();
     void load();
     void destroy(vk::Device device);
 };

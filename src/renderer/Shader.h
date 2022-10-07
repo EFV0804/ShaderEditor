@@ -11,7 +11,7 @@
 class Shader {
 public:
     Shader(vk::Device device, std::string filename, vk::ShaderStageFlagBits stage);
-    Shader();
+    Shader() = delete;
     ~Shader();
 
     std::string filename;
@@ -19,7 +19,7 @@ public:
     vk::ShaderModule module;
     vk::ShaderStageFlagBits stage;
 
-    static std::vector<char> readShaderFile(const std::string& filename);
+    static std::vector<char> readShaderFile(std::string filename);
     void setShaderModule();
     void createShaderModule(std::vector<char> shaderCode);
 };

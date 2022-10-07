@@ -10,9 +10,7 @@ filename{filename},
 stage{stage}{
     setShaderModule();
 }
-Shader::Shader(){
-    //TODO load default shader
-}
+
 void Shader::createShaderModule(std::vector<char> shaderCode)
 {
     vk::ShaderModuleCreateInfo shaderModuleCreateInfo{};
@@ -20,6 +18,7 @@ void Shader::createShaderModule(std::vector<char> shaderCode)
     shaderModuleCreateInfo.codeSize = shaderCode.size();
     shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
+//    vk::ShaderModule mod = device.createShaderModule(shaderModuleCreateInfo);
     module = device.createShaderModule(shaderModuleCreateInfo);
 }
 
@@ -28,7 +27,7 @@ void Shader::setShaderModule() {
     createShaderModule(shaderCode);
 }
 
-std::vector<char> Shader::readShaderFile(const std::string &filename) {
+std::vector<char> Shader::readShaderFile(std::string filename) {
     // Open shader file
     // spv files are binary data, put the pointer at the end of the file to get its size
     std::ifstream file{ filename, std::ios::binary | std::ios::ate };
@@ -47,5 +46,5 @@ std::vector<char> Shader::readShaderFile(const std::string &filename) {
 }
 
 Shader::~Shader(){
-    device.destroyShaderModule(module);
+//    device.destroyShaderModule(module);
 }

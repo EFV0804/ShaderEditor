@@ -29,6 +29,7 @@ public:
 
 //    const int numElements = 3;
 
+
     const std::vector<Vertex> vertices = {
             {{0.0, -0.4, 0.0}, {1.0, 0.0, 0.0}},
             {{0.4, 0.4, 0.0}, {0.0, 1.0, 0.0}},

@@ -5,7 +5,7 @@
 #include <string>
 #include "../Renderable.h"
 
-Renderer::Renderer()
+Renderer::Renderer(): vertexBuffer(vk::BufferUsageFlagBits::eVertexBuffer, 5000000)
 {
 
 }
@@ -25,15 +25,14 @@ int Renderer::init()
         setPhysicalDevice();
         setQueueFamilyIndices();
         createLogicalDevice();
-//        createMemoryAllocator();
         createQueues();
         createSwapchain();
         createRenderPass();
         createFramebuffers();
         createVertexBuffer();
         createCommandBuffers();
-        createSyncStructures();
-//        createSynchronisation();
+//        createSyncStructures();
+        createSynchronisation();
 
     }
     catch (const std::runtime_error& e)
@@ -45,8 +44,8 @@ int Renderer::init()
 
     
 }
-// RUN
-void Renderer::draw(std::vector<Renderable> renderables)
+// DRAW
+void Renderer::draw(std::vector<Renderable>* renderables)
 {
     // BEGIN FRAME
     device.waitForFences(getCurrentFrame().renderFence, VK_TRUE, 1000000000);
@@ -123,17 +122,20 @@ void Renderer::draw(std::vector<Renderable> renderables)
     currentFrame = (currentFrame + 1) % MAX_FRAME_DRAWS;
 }
 
-void Renderer::drawRenderables(std::vector<Renderable> renderables){
+void Renderer::drawRenderables(std::vector<Renderable>* renderables){
     //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
 
     Material* lastMaterial = nullptr;
 
-    for(auto renderable : renderables){
-        if(renderable.material != lastMaterial){
-            vk::Pipeline pipeline = renderable.material->pipeline->getPipeline();
-            getCurrentFrame().commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-            lastMaterial = renderable.material;
+    for(auto renderable : *renderables){
+        if(&renderable.material != lastMaterial){
+//            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
+            getCurrentFrame().commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, renderable.material.pipeline.getPipeline());
+            lastMaterial = &renderable.material;
         }
+        VkDeviceSize offset = 0;
+        getCurrentFrame().commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
+        getCurrentFrame().commandBuffer.draw(renderable.mesh.vertices.size(), 1, 0,0);
 
     }
 
@@ -303,19 +305,6 @@ void Renderer::createCommandBuffers()
     }
 }
 
-void Renderer::createSyncStructures() {
-    vk::FenceCreateInfo fenceCreateInfo = {};
-
-    vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
-
-    for(int i = 0; i < MAX_FRAME_DRAWS; i++){
-        frames.at(i).renderFence = device.createFence(fenceCreateInfo);
-        frames.at(i).presentSemaphore = device.createSemaphore(semaphoreCreateInfo);
-        frames.at(i).renderSemaphore = device.createSemaphore(semaphoreCreateInfo);
-    }
-
-}
-
 void Renderer::createRenderPass()
 {
     vk::RenderPassCreateInfo renderPassCreateInfo{};
@@ -365,6 +354,9 @@ void Renderer::createRenderPass()
     renderPassCreateInfo.pDependencies = subpassDependencies.data();
 
     renderPass = device.createRenderPass(renderPassCreateInfo);
+    mainDeletionQueue.push_function([=](){
+       device.destroyRenderPass(renderPass);
+    });
 
 }
 
@@ -384,28 +376,52 @@ void Renderer::createFramebuffers()
         framebufferCreateInfo.layers = 1;
 
         swapchainFramebuffers[i] = device.createFramebuffer(framebufferCreateInfo);
+        mainDeletionQueue.push_function([=](){
+            device.destroyFramebuffer(swapchainFramebuffers[i]);
+        });
     }
 }
 
 void Renderer::createSynchronisation()
 {
-    semaphores.imageAvailable.resize(MAX_FRAME_DRAWS);
-    semaphores.renderFinished.resize(MAX_FRAME_DRAWS);
-    drawFences.resize(MAX_FRAME_DRAWS);
-
-    vk::SemaphoreCreateInfo semaphoreCreateInfo{};
-    semaphoreCreateInfo.sType = vk::StructureType::eSemaphoreCreateInfo;
-
     vk::FenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = vk::StructureType::eFenceCreateInfo;
     fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+    fenceCreateInfo.pNext = nullptr;
 
-    for (size_t i = 0; i < MAX_FRAME_DRAWS; ++i)
-    {
-        semaphores.imageAvailable[i] = device.createSemaphore(semaphoreCreateInfo);
-        semaphores.renderFinished[i] = device.createSemaphore(semaphoreCreateInfo);
-        drawFences[i] = device.createFence(fenceCreateInfo);
+    vk::SemaphoreCreateInfo semaphoreCreateInfo{};
+    semaphoreCreateInfo.sType = vk::StructureType::eSemaphoreCreateInfo;
+    semaphoreCreateInfo.pNext = nullptr;
+
+    for(auto frame : frames){
+        frame.renderFence = device.createFence(fenceCreateInfo);
+        frame.presentSemaphore = device.createSemaphore(semaphoreCreateInfo);
+        frame.renderSemaphore = device.createSemaphore(semaphoreCreateInfo);
+
+        mainDeletionQueue.push_function([=](){device.destroyFence(frame.renderFence);
+            device.destroySemaphore(frame.renderSemaphore);
+            device.destroySemaphore(frame.presentSemaphore);});
+
     }
+//    semaphores.imageAvailable.resize(MAX_FRAME_DRAWS);
+//    semaphores.renderFinished.resize(MAX_FRAME_DRAWS);
+//    drawFences.resize(MAX_FRAME_DRAWS);
+//
+//    vk::SemaphoreCreateInfo semaphoreCreateInfo{};
+//    semaphoreCreateInfo.sType = vk::StructureType::eSemaphoreCreateInfo;
+//
+//    vk::FenceCreateInfo fenceCreateInfo{};
+//    fenceCreateInfo.sType = vk::StructureType::eFenceCreateInfo;
+//    fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+//
+//    for (size_t i = 0; i < MAX_FRAME_DRAWS; ++i)
+//    {
+//        semaphores.imageAvailable[i] = device.createSemaphore(semaphoreCreateInfo);
+//        semaphores.renderFinished[i] = device.createSemaphore(semaphoreCreateInfo);
+//        drawFences[i] = device.createFence(fenceCreateInfo);
+//    }
+
+
 }
 
 
@@ -625,21 +641,21 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
 void Renderer::cleanUp()
 {
     device.waitIdle();
+    mainDeletionQueue.flush();
 
     device.destroySwapchainKHR(swapchain);
     instance.destroySurfaceKHR(surface);
 
-    for(auto frame : frames){
-        device.destroyCommandPool(frame.commandPool);
-        device.destroyFence(frame.renderFence);
-        device.destroySemaphore(frame.presentSemaphore);
-        device.destroySemaphore(frame.renderSemaphore);
-    }
+//    for(auto frame : frames){
+//        device.destroyCommandPool(frame.commandPool);
+//        device.destroyFence(frame.renderFence);
+//        device.destroySemaphore(frame.presentSemaphore);
+//        device.destroySemaphore(frame.renderSemaphore);
+//    }
     for (auto image : swapchainImages)
     {
         device.destroyImageView(image.imageView);
     }
-
     for (auto framebuffer : swapchainFramebuffers)
     {
         device.destroyFramebuffer(framebuffer);
@@ -648,38 +664,28 @@ void Renderer::cleanUp()
     glfwDestroyWindow(window);
     glfwTerminate();
 
-    device.freeMemory(vertexBuffer.bufferMemory);
-    device.destroyBuffer(vertexBuffer.getBuffer());
-    vertexBuffer.~Buffer();
+    vertexBuffer.destroy(device);
     device.destroy();
     instance.destroy();
+
 }
 
-void Renderer::loadMeshes(std::vector<Renderable> renderables){
+void Renderer::loadMeshes(std::vector<Renderable>* renderables){
     //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
 //    vertexBuffer.map(this, 0);
-    struct Vertex {
-        glm::vec3 pos;
-        glm::vec3 color;
-    };
-    const std::vector<Vertex> vertices = {
-            {{0.0, -0.4, 0.0}, {1.0, 0.0, 0.0}},
-            {{0.4, 0.4, 0.0}, {0.0, 1.0, 0.0}},
-            {{-0.4, 0.4, 0.0}, {0.0, 0.0, 1.0}}
-    };
-    auto bufferStart = static_cast<float*>(device.mapMemory(*vertexBuffer.getDeviceMemory(), 0, 3*sizeof(Vertex)));
-    memcpy(bufferStart, vertices.data(), 3*sizeof(Vertex));
-    vertexBuffer.unMap(this);
-//    for(auto renderable : renderables){
-//
-//    }
+
+    for(auto renderable : *renderables){
+        vertexBuffer.map(this, 0, renderable.mesh.getSize());
+        vertexBuffer.copy(renderable.mesh.vertices.data(), renderable.mesh.getSize());
+        vertexBuffer.unMap(this);
+    }
 }
 
 void Renderer::createVertexBuffer(){
-    vertexBuffer = Buffer(&device, vk::BufferUsageFlags {vk::BufferUsageFlagBits::eVertexBuffer}, 500000);
+    vertexBuffer = Buffer(vk::BufferUsageFlags {vk::BufferUsageFlagBits::eVertexBuffer}, 500000);
 
     uint32_t memoryTypeIndex = getMemoryTypeIndex();
-    vertexBuffer.load(this,memoryTypeIndex);
+    vertexBuffer.load(this);
     vertexBuffer.allocate(memoryTypeIndex, this);
     vertexBuffer.bind(this);
 

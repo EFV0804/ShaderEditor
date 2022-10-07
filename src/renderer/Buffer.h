@@ -5,53 +5,46 @@
 #ifndef SHADEREDITOR_BUFFER_H
 #define SHADEREDITOR_BUFFER_H
 #include <Vulkan/vulkan.hpp>
-//#include <vk_mem_alloc.hpp>
  #include <memory>
 
 class Renderer;
 
-//namespace vma{
-//    class Allocation;
-//}
-
 enum BufferState{
     Empty,
     Allocated,
-    Locked,
+    Mapped,
     Destroyed
 };
 
 class Buffer {
 public:
-    Buffer(vk::Device* pDevice, vk::BufferUsageFlags pUsage, uint64_t pSize);
-    Buffer() = default;
+    Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize);
+    Buffer() = delete;
+    Buffer(const Buffer&) = delete;
+    ~Buffer() = default;
 
-    ~Buffer();
-    void createBuffer();
-    void load(Renderer* renderer, uint32_t memoryTypeIndex);
-    void map(Renderer *renderer, int offset);
+    void load(Renderer* renderer);
+    void map(Renderer *renderer, int offset, uint64_t dataSize);
     void unMap(Renderer *renderer);
     void allocate(uint32_t memoryTypeIndex, Renderer *renderer);
-    void write();
-    void bind(Renderer *renderer, int memoryOffest = 0);
-//    void lockMem();
-//    void unlockMem();
-    vk::BufferCreateInfo getBufferCreateInfo(Renderer* renderer);
+    void bind(Renderer *renderer, int memoryOffset = 0);
+    void copy(const void* src, uint64_t dataSize);
+    void destroy(vk::Device& device);
+
+
+    vk::BufferCreateInfo getBufferCreateInfo(uint32_t queueFamilyIndices);
     vk::Buffer& getBuffer(){return buffer;}
-    vk::BufferUsageFlags usage;
-    float* bufferStart = nullptr;
-    uint64_t size;
-    vk::DeviceMemory* getDeviceMemory(){return &bufferMemory;}
-    vk::DeviceMemory bufferMemory;
 
 private:
-    vk::BufferCreateInfo info;
+    float* bufferStart = nullptr;
+    uint64_t size = 0;
+    vk::BufferUsageFlags usage;
+    vk::DeviceMemory bufferMemory{};
+    vk::BufferCreateInfo info{};
+    // TODO Use state to check safe buffer use
     BufferState state {BufferState::Empty};
-    vk::Buffer buffer;
-    vk::MemoryAllocateInfo memoryAllocateInfo;
-    vk::Device* device;
-
-//    std::unique_ptr<vma::Allocation> allocation;
+    vk::Buffer buffer{};
+    vk::MemoryAllocateInfo memoryAllocateInfo{};
 };
 
 

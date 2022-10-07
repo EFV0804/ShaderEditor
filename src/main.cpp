@@ -3,22 +3,19 @@
 #include "Renderer.h"
 #include <string>
 #include "Scene.h"
-#include <iostream>
 
 int main() {
 
-//    std::cout<<"test"<<std::endl;
-
     Renderer renderer;
     if (renderer.init() == EXIT_FAILURE) return EXIT_FAILURE;
-    Scene sceneExample = Scene();
+    Scene sceneExample{};
     sceneExample.load(&renderer);
-    renderer.loadMeshes(sceneExample.renderables);
+
 
     while (!glfwWindowShouldClose(renderer.window))
     {
         glfwPollEvents();
-//        sceneExample.draw(&renderer);
+        sceneExample.draw(&renderer);
     }
 
     renderer.cleanUp();

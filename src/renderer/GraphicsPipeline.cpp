@@ -2,7 +2,9 @@
 #include "Renderer.h"
 #include "Mesh.h"
 
-GraphicsPipeline::GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>* stages)
+GraphicsPipeline::GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages):
+pipelineLayout(),
+graphicsPipeline()
 {
     createGraphicsPipeline(renderer, stages);
 }
@@ -13,7 +15,7 @@ void GraphicsPipeline::destroy(Renderer* renderer)
     renderer->device.destroyPipeline(graphicsPipeline);
 }
 
-void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>* stages)
+void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages)
 {
 
     // Get Vertex State Input Info
@@ -112,8 +114,8 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     vk::GraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = vk::StructureType::eGraphicsPipelineCreateInfo;
     pipelineInfo.pNext = nullptr;
-    pipelineInfo.stageCount = stages->size();
-    pipelineInfo.pStages = stages->data();
+    pipelineInfo.stageCount = stages.size();
+    pipelineInfo.pStages = stages.data();
     pipelineInfo.pVertexInputState = &vertexInputInfo;
     pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
     pipelineInfo.pViewportState = &viewportInfo;
@@ -124,7 +126,6 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     pipelineInfo.renderPass = renderer->getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
 
     vk::Result result = renderer->device.createGraphicsPipelines(VK_NULL_HANDLE,
                                                                  1,

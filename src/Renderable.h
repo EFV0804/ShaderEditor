@@ -10,11 +10,12 @@
 class Renderable {
 public:
     Renderable() = default;
-    Renderable(Mesh* pMesh, Material* pMaterial);
+    Renderable(Mesh pMesh, Material pMaterial);
     ~Renderable() = default;
 
-    Mesh* mesh = nullptr;
-    Material* material = nullptr;
+    const std::string meshName;
+    Mesh mesh{};
+    Material material;
 
     void load();
 };

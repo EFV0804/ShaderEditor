@@ -4,7 +4,7 @@
 
 #include "Renderable.h"
 
-Renderable::Renderable(Mesh* pMesh, Material* pMaterial):mesh{pMesh}, material{pMaterial} {
+Renderable::Renderable(Mesh pMesh, Material pMaterial):mesh{pMesh}, material{pMaterial} {
 
 }
 

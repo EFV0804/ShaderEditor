@@ -5,9 +5,30 @@
 #include <stdexcept>
 #include <vector>
 #include <array>
+#include <deque>
+#include <functional>
 #include "VkUtilities.h"
 #include "Buffer.h"
+
 class Renderable;
+
+struct DeletionQueue
+{
+    std::deque<std::function<void()>> deletors;
+
+    void push_function(std::function<void()>&& function) {
+        deletors.push_back(function);
+    }
+
+    void flush() {
+        // reverse iterate the deletion queue to execute all the functions
+        for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
+            (*it)(); //call functors
+        }
+
+        deletors.clear();
+    }
+};
 
 class Renderer
 {
@@ -17,6 +38,8 @@ public:
 
 
     vk::Instance instance;
+
+    DeletionQueue mainDeletionQueue;
 
     // PRESENTATION
     GLFWwindow* window;
@@ -48,40 +71,34 @@ public:
 	vk::Queue presentationQueue;
 
     // SYNCHRONISATION
-    struct {
-        vector<vk::Semaphore> imageAvailable;
-        vector<vk::Semaphore> renderFinished;
-        vector<vk::Semaphore> graphicsWaitSemaphores;
-        vector<vk::Semaphore> graphicsSignalSemaphores;
-
-        //graphics semaphore used to signal the graphics process is done
-        vk::Semaphore graphics;
-
-    } semaphores;
-    vector<vk::Fence> drawFences;
+//    struct {
+//        vector<vk::Semaphore> imageAvailable;
+//        vector<vk::Semaphore> renderFinished;
+//        vector<vk::Semaphore> graphicsWaitSemaphores;
+//        vector<vk::Semaphore> graphicsSignalSemaphores;
+//
+//        //graphics semaphore used to signal the graphics process is done
+//        vk::Semaphore graphics;
+//
+//    } semaphores;
+//    vector<vk::Fence> drawFences;
 
 
     // COMMANDS
     int currentFrame = 0;
     struct FrameData{
-        vk::Semaphore presentSemaphore, renderSemaphore;
+        vk::Semaphore presentSemaphore;
+        vk::Semaphore renderSemaphore;
         vk::Fence renderFence;
         vk::CommandPool commandPool;
         vk::CommandBuffer commandBuffer;
     };
     static constexpr int MAX_FRAME_DRAWS = 2;
     std::vector<FrameData> frames;
-    FrameData& getCurrentFrame();
+    FrameData getCurrentFrame();
 
     std::vector<vk::Framebuffer> swapchainFramebuffers;
-//    vk::Framebuffer framebuffer;
-//    vk::CommandPool commandPool;
-//    vector<vk::CommandBuffer> commandBuffers;
-//    vk::CommandBuffer commandBuffer;
-
-
     Buffer vertexBuffer;
-//    std::vector<Renderable>* renderables;
 
     // GETTERS
     vk::RenderPass getRenderPass(){return renderPass;}
@@ -89,10 +106,10 @@ public:
 
     // RUN
     int init();
-	void draw(std::vector<Renderable> renderables);
-    void drawRenderables(std::vector<Renderable> renderables);
+	void draw(std::vector<Renderable>* renderables);
+    void drawRenderables(std::vector<Renderable>* renderables);
 	void cleanUp();
-    void loadMeshes(std::vector<Renderable> renderables);
+    void loadMeshes(std::vector<Renderable>* renderables);
 
     uint32_t getMemoryTypeIndex();
 
