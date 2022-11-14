@@ -6,60 +6,64 @@
 #include "Renderer.h"
 #include <iostream>
 
-Buffer::Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize):
-    usage(pUsage),
-    size(pSize){
+Buffer::Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize) :
+        usage(pUsage),
+        size(pSize) {
 
 }
 
-void Buffer::load(Renderer* renderer) {
-
-    uint32_t queueFamilyIndex = renderer->queueFamilyIndices.graphicsFamily;
+void Buffer::init(uint32_t queueFamilyIndex, vk::Device &device) {
 
     info = getBufferCreateInfo(queueFamilyIndex);
-    buffer = renderer->device.createBuffer(info);
+    buffer = device.createBuffer(info);
+    SD_RENDERER_DEBUG("Initilised buffer");
 }
 
-void Buffer::map(Renderer *renderer, int offset, uint64_t dataSize) {
+void Buffer::map(vk::Device &device, int offset, uint64_t dataSize) {
 
-    bufferStart = static_cast<float*>(renderer->device.mapMemory(bufferMemory, offset, dataSize));
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Allocated,
+                                "Buffer memory not allocated, can't map unallocated memory.");
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Mapped, "Buffer memory is already mapped")
+    bufferStart = static_cast<float *>(device.mapMemory(bufferMemory, offset, dataSize));
     state = BufferState::Mapped;
 
 }
 
-void Buffer::unMap(Renderer *renderer) {
-    renderer->device.unmapMemory(bufferMemory);
+void Buffer::unMap(vk::Device &device) {
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Mapped,
+                                "Trying to unmap memory that was is not mapped.")
+    device.unmapMemory(bufferMemory);
     state = BufferState::Allocated;
 }
 
-void Buffer::allocate(uint32_t memoryTypeIndex, Renderer* renderer) {
+void Buffer::allocate(uint32_t memoryTypeIndex, vk::Device &device) {
     vk::MemoryRequirements memRequirements;
-    renderer->device.getBufferMemoryRequirements(buffer, &memRequirements);
+    device.getBufferMemoryRequirements(buffer, &memRequirements);
 
     memoryAllocateInfo.sType = vk::StructureType::eMemoryAllocateInfo;
     memoryAllocateInfo.allocationSize = memRequirements.size;
     memoryAllocateInfo.memoryTypeIndex = memoryTypeIndex;
     memoryAllocateInfo.pNext = nullptr;
 
-    bufferMemory = renderer->device.allocateMemory(memoryAllocateInfo);
+    bufferMemory = device.allocateMemory(memoryAllocateInfo);
     state = BufferState::Allocated;
 }
 
-void Buffer::bind(Renderer *renderer, int memoryOffset) {
-    renderer->device.bindBufferMemory(buffer, bufferMemory, memoryOffset);
+void Buffer::bind(vk::Device &device, int memoryOffset) {
+    device.bindBufferMemory(buffer, bufferMemory, memoryOffset);
 }
 
-void Buffer::copy(const void* src, uint64_t dataSize){
+void Buffer::copy(const void *src, uint64_t dataSize) {
     memcpy(bufferStart, src, dataSize);
 }
 
-void Buffer::destroy(vk::Device& device) {
+void Buffer::destroy(vk::Device &device) {
     device.destroyBuffer(buffer);
     device.freeMemory(bufferMemory);
     state = BufferState::Destroyed;
 }
 
-vk::BufferCreateInfo Buffer::getBufferCreateInfo(const uint32_t queueFamilyIndices){
+vk::BufferCreateInfo Buffer::getBufferCreateInfo(const uint32_t queueFamilyIndices) {
     vk::BufferCreateInfo bufferInfo{};
     bufferInfo.sType = vk::StructureType::eBufferCreateInfo;
     bufferInfo.size = size;

@@ -15,8 +15,6 @@
 //}
 
 
-
-
 int Renderer::init() {
 
     initWindow();
@@ -30,7 +28,7 @@ int Renderer::init() {
         initSwapchain();
         initRenderPass();
         initFramebuffers();
-//        initVertexBuffer();
+        initVertexBuffer();
         initCommandBuffers();
 ////        createSyncStructures();
         createSynchronisation();
@@ -222,8 +220,8 @@ void Renderer::draw() {
 }
 
 void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
-//    //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
-//
+    //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
+
 //    Material* lastMaterial = nullptr;
 //
 //    for(auto renderable : *renderables){
@@ -237,7 +235,7 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
 //        getCurrentFrame().commandBuffer.draw(renderable.mesh.vertices.size(), 1, 0,0);
 //
 //    }
-//
+
 }
 
 void Renderer::initWindow() {
@@ -553,7 +551,7 @@ void Renderer::createSynchronisation() {
 
 }
 
-Renderer::SwapchainDetails Renderer::getSwapchainDetails(vk::PhysicalDevice pPhysicalDevice) {
+Renderer::SwapchainDetails Renderer::getSwapchainDetails(vk::PhysicalDevice pPhysicalDevice) const {
     SD_RENDERER_DEBUG("Getting Swapchain Details");
     SwapchainDetails swapchainDetails;
     swapchainDetails.surfaceCapabilities = pPhysicalDevice.getSurfaceCapabilitiesKHR(surface);
@@ -762,8 +760,6 @@ void Renderer::cleanUp() {
     glfwDestroyWindow(window);
     glfwTerminate();
 
-//    vertexBuffer.destroy(device);
-//    device.destroy();
     instance.destroy();
 
 }
@@ -780,12 +776,14 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 }
 
 void Renderer::initVertexBuffer() {
-//    vertexBuffer = Buffer(vk::BufferUsageFlags {vk::BufferUsageFlagBits::eVertexBuffer}, 500000);
-//
-//    uint32_t memoryTypeIndex = getMemoryTypeIndex();
-//    vertexBuffer.load(this);
-//    vertexBuffer.allocate(memoryTypeIndex, this);
-//    vertexBuffer.bind(this);
+
+    SD_RENDERER_DEBUG("Initialising vertex buffer.");
+    uint32_t memoryTypeIndex = getMemoryTypeIndex();
+    vertexBuffer.init(queueFamilyIndices.graphicsFamily, device);
+    mainDeletionQueue.push_function([=]() {vertexBuffer.destroy(device);});
+
+    vertexBuffer.allocate(memoryTypeIndex, device);
+    vertexBuffer.bind(device);
 
 }
 

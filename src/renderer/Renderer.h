@@ -10,8 +10,8 @@
 #include <functional>
 #include <memory>
 #include "Logger.h"
+#include "Buffer.h"
 //#include "VkUtilities.h"
-//#include "Buffer.h"
 
 class Renderable;
 
@@ -49,6 +49,7 @@ struct DeletionQueue {
 /**
  * \brief Renderer class used to initialise Vulkan and do draw calls
  */
+
 class Renderer {
 public:
     Renderer() = default;
@@ -179,8 +180,10 @@ public:
      * A vector of framebuffers. A framebuffer references an image view for the swapchain that are used for color, depth and stencils.
      */
     std::vector<vk::Framebuffer> swapchainFramebuffers;
-
-//    Buffer vertexBuffer;
+    /*
+     * a Buffer object destined to store vertices to be rendered.
+     */
+    Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer, 50000};
     /*
      * \brief Returns the render pass
      */
@@ -307,7 +310,7 @@ private:
      *
      * Retrieves the surface's capabilities, supported format, supported presentation modes.
      */
-    SwapchainDetails getSwapchainDetails(vk::PhysicalDevice pPhysicalDevice);
+    SwapchainDetails getSwapchainDetails(vk::PhysicalDevice pPhysicalDevice) const;
     /*!
      * \brief Selects the requested presentation mode if available in presentation modes passed.
      *

@@ -15,25 +15,56 @@ enum BufferState{
     Mapped,
     Destroyed
 };
-
+/*
+ * Buffer class serves as a wrapper for the vk::Buffer class
+ */
 class Buffer {
 public:
+    /*!
+     * \brief Constructor initialises the usage and size variables.
+     *
+     * \param pUsage
+     * \param pSize
+     *
+     */
     Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize);
     Buffer() = delete;
     Buffer(const Buffer&) = delete;
     ~Buffer() = default;
 
-    void load(Renderer* renderer);
-    void map(Renderer *renderer, int offset, uint64_t dataSize);
-    void unMap(Renderer *renderer);
-    void allocate(uint32_t memoryTypeIndex, Renderer *renderer);
-    void bind(Renderer *renderer, int memoryOffset = 0);
+    /*!
+     * \brief Initialises the vk::Buffer object
+     * \param renderer
+     */
+    void init(uint32_t queueFamilyIndex, vk::Device &device);
+    /*!
+     * \brief Maps memory of the requested size at the right offset and store a pointer to that memory in BufferStart.
+     *
+     * \param device
+     * \param offset
+     * \param dataSize
+     */
+    void map(vk::Device &device, int offset, uint64_t dataSize);
+    /*!
+     * \brief Unmaps the buffer's map memory.
+     *
+     * \param device
+     */
+    void unMap(vk::Device &device);
+    /*!
+     * \brief Allocates memory for the buffer.
+     * @param memoryTypeIndex
+     * @param device
+     */
+    void allocate(uint32_t memoryTypeIndex, vk::Device &device);
+    void bind(vk::Device &device, int memoryOffset = 0);
     void copy(const void* src, uint64_t dataSize);
     void destroy(vk::Device& device);
 
 
     vk::BufferCreateInfo getBufferCreateInfo(uint32_t queueFamilyIndices);
     vk::Buffer& getBuffer(){return buffer;}
+    vk::DeviceMemory& getDeviceMemory(){return bufferMemory;}
 
 private:
     float* bufferStart = nullptr;
