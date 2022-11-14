@@ -82,12 +82,12 @@ public:
      * \brief util getter for vk::Buffer member
      * \return member buffer
      */
-     vk::Buffer& getBuffer(){return buffer;}
+     const vk::Buffer& getBuffer() const {return buffer;}
      /*!
       * \brief utility getter for buffer memory.
       * @return member vk::DeviceMemory bufferMemory
       */
-     vk::DeviceMemory& getDeviceMemory(){return bufferMemory;}
+     const vk::DeviceMemory& getDeviceMemory() const {return bufferMemory;}
 
 private:
     /*
