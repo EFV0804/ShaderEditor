@@ -73,14 +73,14 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     vk::Viewport viewport;
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)renderer->swapchainExtent.width;
-    viewport.height = (float)renderer->swapchainExtent.height;
+    viewport.width = (float)renderer->getSwapchainExtent().width;
+    viewport.height = (float)renderer->getSwapchainExtent().height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     vk::Rect2D scissor;
     scissor.offset = 0;
-    scissor.extent = renderer->swapchainExtent;
+    scissor.extent = renderer->getSwapchainExtent();
 
 
     vk::PipelineViewportStateCreateInfo viewportInfo = {};
