@@ -53,28 +53,89 @@ struct DeletionQueue {
 class Renderer {
 public:
     Renderer() = default;
+//    Renderer() = default;
 
     Renderer(const Renderer &) = delete;
 
     Renderer &operator=(const Renderer &) = delete;
 
     ~Renderer() = default;
-
     /**
-     * Vulkan instance
+     * Point to the GLFW window.
      */
+    GLFWwindow *window = nullptr;
+    /**
+     * A Vulkan logical device, i.e a description of which physical device features are being used.
+     */
+    vk::Device device;
+    /*!
+*  \brief Initialises the renderer by calling the initialisations functions of required components.
+*  \return int for SUCCESS or FAILURE
+*/
+    int init();
+    /*!
+     * \brief Draws a frame to screen.
+     *
+     * Records and submit commands to the queue, begins and ends render pass, and signals appropriate semaphores and fence to trigger next frame render.
+     *
+     * \param [in] renderables a vector of renderable objects to be drawn on screen.
+     */
+    void draw(std::vector<Renderable> *renderables);
+    /*!
+     * \brief Draws a frame to screen.
+     *
+     * Records and submit commands to the queue, begins and ends render pass, and signals appropriate semaphores and fence to trigger next frame render.
+     */
+    void draw();
+    /*!
+     * \brief Draws renderables to screen.
+     *
+     * In charge of binding the pipeline associated with the renderable's material, binding the vertex buffer, and making the draw call.
+     *
+     * \param [in] renderables a pointer to a vector of renderable objects.
+     */
+    void drawRenderables(std::vector<Renderable> *renderables);
+    /*!
+     * \brief Destroys all Vulkan objects when Renderer object destructor is called.
+     *
+     * Waits for the device to be idle before destroying objects. Uses the deletion queue to detroy objects.
+     */
+    void cleanUp();
+    /*!
+     * \brief copies mesh vertex data to the vertex buffer.
+     *
+     * \param [in] a pointer to a vector of renderable objects.
+     */
+    void loadMeshes(std::vector<Renderable> *renderables);
+    /*!
+     * \brief Getter for the swapchain extent
+     * \return vk::Extent2D object
+     */
+    const vk::Extent2D& getSwapchainExtent() const {return swapchainExtent;}
+    /*
+ * \brief Returns the render pass
+ */
+    const vk::RenderPass& getRenderPass() const { return renderPass; }
+private:
+    /**
+    * Vulkan instance
+    */
     vk::Instance instance;
     /**
      * Deletion queue used to ensure destruction of Vulkan entities. Uses FIFO logic.
      */
     DeletionQueue mainDeletionQueue;
     /**
-     * Point to the GLFW window.
+    * indicates the number corresponding to the current frame. Equivalent to currentFrame % MAX_FRAME_DRAWS.
+    */
+    int currentFrame = 0;
+    /*
+     * Describes how the rendering process should go. Manages the relationship between attachments and subpasses.
      */
-    GLFWwindow *window = nullptr;
+    vk::RenderPass renderPass;
     /**
-     * a Vulkan surface, i.e an abstraction of the GLFW window than Vulkan can interact with.
-     */
+ * a Vulkan surface, i.e an abstraction of the GLFW window than Vulkan can interact with.
+ */
     vk::SurfaceKHR surface;
     /**
      * Struct to store and organise the image and image view that constitute the swapchain images.
@@ -116,12 +177,8 @@ public:
      */
     vk::PhysicalDevice physicalDevice;
     /**
-     * A Vulkan logical device, i.e a description of which physical device features are being used.
-     */
-    vk::Device device;
-    /**
-     * The available memory types and properties available on the current physical device.
-     */
+ * The available memory types and properties available on the current physical device.
+ */
     vk::PhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
     /**
      * Struct containing the queue family indices used to select and create the various queues.
@@ -170,12 +227,6 @@ public:
      * Vector a frame data describing all the frames in the process of being rendered/presented.
      */
     std::vector<FrameData> frames;
-    /*!
-     * \brief  Returns the current frame for easy access
-     *
-     * \return Pointer to vector element of current frame.
-     */
-    FrameData *getCurrentFrame() { return &frames.at(currentFrame % MAX_FRAME_DRAWS); }
     /*
      * A vector of framebuffers. A framebuffer references an image view for the swapchain that are used for color, depth and stencils.
      */
@@ -184,67 +235,6 @@ public:
      * a Buffer object destined to store vertices to be rendered.
      */
     Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer, 50000};
-    /*
-     * \brief Returns the render pass
-     */
-    vk::RenderPass getRenderPass() { return renderPass; }
-    /*!
-     *  \brief Initialises the renderer by calling the initialisations functions of required components.
-     *  \return int for SUCCESS or FAILURE
-     */
-    int init();
-    /*!
-     * \brief Draws a frame to screen.
-     *
-     * Records and submit commands to the queue, begins and ends render pass, and signals appropriate semaphores and fence to trigger next frame render.
-     *
-     * \param [in] renderables a vector of renderable objects to be drawn on screen.
-     */
-    void draw(std::vector<Renderable> *renderables);
-    /*!
-     * \brief Draws a frame to screen.
-     *
-     * Records and submit commands to the queue, begins and ends render pass, and signals appropriate semaphores and fence to trigger next frame render.
-     */
-    void draw();
-    /*!
-     * \brief Draws renderables to screen.
-     *
-     * In charge of binding the pipeline associated with the renderable's material, binding the vertex buffer, and making the draw call.
-     *
-     * \param [in] renderables a pointer to a vector of renderable objects.
-     */
-    void drawRenderables(std::vector<Renderable> *renderables);
-    /*!
-     * \brief Destroys all Vulkan objects when Renderer object destructor is called.
-     *
-     * Waits for the device to be idle before destroying objects. Uses the deletion queue to detroy objects.
-     */
-    void cleanUp();
-    /*!
-     * \brief copies mesh vertex data to the vertex buffer.
-     *
-     * \param [in] a pointer to a vector of renderable objects.
-     */
-    void loadMeshes(std::vector<Renderable> *renderables);
-    /*!
-     * \brief Gets the appropriate memory type index for the requested memory usage.
-     *
-     * \param [in] NOT IMPLEMENTED, see function definition. memory property flag determines the type of memory for which to return the index.
-     *
-     * \return the index of the requested memory type
-     */
-    uint32_t getMemoryTypeIndex();
-
-private:
-    /**
-    * indicates the number corresponding to the current frame. Equivalent to currentFrame % MAX_FRAME_DRAWS.
-    */
-    int currentFrame = 0;
-    /*
-     * Describes how the rendering process should go. Manages the relationship between attachments and subpasses.
-     */
-    vk::RenderPass renderPass;
     /*!
      * \brief Creates a GLFW window.
      */
@@ -363,4 +353,18 @@ private:
      * \return Returns the created image view object.
      */
     vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
+    /*!
+ * \brief Gets the appropriate memory type index for the requested memory usage.
+ *
+ * \param [in] NOT IMPLEMENTED, see function definition. memory property flag determines the type of memory for which to return the index.
+ *
+ * \return the index of the requested memory type
+ */
+    uint32_t getMemoryTypeIndex();
+    /*!
+ * \brief  Returns the current frame for easy access
+ *
+ * \return Pointer to vector element of current frame.
+ */
+    FrameData *getCurrentFrame() { return &frames.at(currentFrame % MAX_FRAME_DRAWS); }
 };
