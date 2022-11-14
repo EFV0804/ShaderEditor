@@ -8,11 +8,12 @@ class GraphicsPipeline
 {
 public:
     GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages);
-    GraphicsPipeline() = default;
-//    GraphicsPipeline(const GraphicsPipeline&) = delete;
+    GraphicsPipeline() = delete;
+    GraphicsPipeline(const GraphicsPipeline&) = delete;
+    GraphicsPipeline &operator=(const GraphicsPipeline &) = delete;
 	~GraphicsPipeline() = default;
 
-    vk::Pipeline& getPipeline(){return graphicsPipeline;}
+    const vk::Pipeline& getPipeline() const {return graphicsPipeline;}
 
 private:
 	vk::PipelineLayout pipelineLayout;
