@@ -14,8 +14,7 @@ Buffer::Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize) :
 
 void Buffer::init(uint32_t queueFamilyIndex, vk::Device &device) {
 
-    info = getBufferCreateInfo(queueFamilyIndex);
-    buffer = device.createBuffer(info);
+    buffer = device.createBuffer(getBufferCreateInfo(queueFamilyIndex));
     SD_RENDERER_DEBUG("Initilised buffer");
 }
 
@@ -40,6 +39,7 @@ void Buffer::allocate(uint32_t memoryTypeIndex, vk::Device &device) {
     vk::MemoryRequirements memRequirements;
     device.getBufferMemoryRequirements(buffer, &memRequirements);
 
+    vk::MemoryAllocateInfo memoryAllocateInfo = {};
     memoryAllocateInfo.sType = vk::StructureType::eMemoryAllocateInfo;
     memoryAllocateInfo.allocationSize = memRequirements.size;
     memoryAllocateInfo.memoryTypeIndex = memoryTypeIndex;

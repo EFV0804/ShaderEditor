@@ -8,7 +8,9 @@
  #include <memory>
 
 class Renderer;
-
+/*
+ * enum buffer's possible states: Empty, Allocated, Mapped, Destroyed
+ */
 enum BufferState{
     Empty,
     Allocated,
@@ -30,6 +32,7 @@ public:
     Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize);
     Buffer() = delete;
     Buffer(const Buffer&) = delete;
+    Buffer &operator=(const Buffer&) = delete;
     ~Buffer() = default;
 
     /*!
@@ -53,29 +56,70 @@ public:
     void unMap(vk::Device &device);
     /*!
      * \brief Allocates memory for the buffer.
-     * @param memoryTypeIndex
-     * @param device
+     * \param memoryTypeIndex
+     * \param device
      */
     void allocate(uint32_t memoryTypeIndex, vk::Device &device);
+    /*!
+     * \brief Binds memory to the buffer
+     *
+     * \param device
+     * \param memoryOffset
+     */
     void bind(vk::Device &device, int memoryOffset = 0);
+    /*!
+     * \brief copies memory content from src pointer to buffer's start pointer. Uses memcpy.
+     * \param src a pointer to the beginning of the memory of th source data to copy
+     * \param dataSize the size of the data.
+     */
     void copy(const void* src, uint64_t dataSize);
+    /*!
+     * \brief Destroy vk::Buffer object, frees memory and set Buffer object state to BufferState::Destroyed
+     * \param device
+     */
     void destroy(vk::Device& device);
-
-
-    vk::BufferCreateInfo getBufferCreateInfo(uint32_t queueFamilyIndices);
-    vk::Buffer& getBuffer(){return buffer;}
-    vk::DeviceMemory& getDeviceMemory(){return bufferMemory;}
+    /*!
+     * \brief util getter for vk::Buffer member
+     * \return member buffer
+     */
+     vk::Buffer& getBuffer(){return buffer;}
+     /*!
+      * \brief utility getter for buffer memory.
+      * @return member vk::DeviceMemory bufferMemory
+      */
+     vk::DeviceMemory& getDeviceMemory(){return bufferMemory;}
 
 private:
+    /*
+     * Used to store pointer for mapping memory
+     */
     float* bufferStart = nullptr;
+    /*
+     * Size of the memory required for the buffer
+     */
     uint64_t size = 0;
+    /*
+     * The buffer's usage.
+     */
     vk::BufferUsageFlags usage;
+    /*
+     * The buffer memory that will be allocated.
+     */
     vk::DeviceMemory bufferMemory{};
-    vk::BufferCreateInfo info{};
-    // TODO Use state to check safe buffer use
+    /*
+     * The state of the Buffer object
+     */
     BufferState state {BufferState::Empty};
+    /*
+     * The Vulkan buffer object.
+     */
     vk::Buffer buffer{};
-    vk::MemoryAllocateInfo memoryAllocateInfo{};
+    /*!
+     * \brief Return the info for buffer creation.
+     * \param queueFamilyIndices
+     * \return a vk::BufferCreateInfo object
+     */
+    vk::BufferCreateInfo getBufferCreateInfo(uint32_t queueFamilyIndices);
 };
 
 
