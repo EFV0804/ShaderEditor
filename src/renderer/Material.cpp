@@ -11,7 +11,7 @@ renderer{pRenderer},
 shaders{loadShaders(shadersInfo)},
 pipeline{loadPipeline()},
 name{pName}{
-    renderer->mainDeletionQueue.push_function([=]() {this->cleanUp();});
+
 }
 
 std::vector<Shader> Material::loadShaders(std::vector<ShaderInfo> info){
@@ -43,7 +43,7 @@ GraphicsPipeline Material::loadPipeline() {
     return GraphicsPipeline{renderer, stages};
 }
 
-void Material::cleanUp() {
+void Material::cleanUp() const {
     for(auto shader : shaders){
         shader.cleanUp();
     }

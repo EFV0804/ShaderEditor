@@ -27,7 +27,7 @@ public:
     Material(Renderer* pRenderer, std::vector<ShaderInfo> shadersInfo, std::string pName);
     Material() = delete;
     ~Material() = default;
-    Material(const Material&) = delete;
+//    Material(const Material&) = delete;
     Material& operator=(const Material&) = delete;
 
     /*
@@ -66,6 +66,6 @@ public:
      */
     GraphicsPipeline pipeline;
 
-    void cleanUp();
+    void cleanUp() const;
 
 };
