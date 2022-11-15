@@ -2,28 +2,25 @@
 #include "Renderer.h"
 #include "Mesh.h"
 
-GraphicsPipeline::GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo> stages)
+GraphicsPipeline::GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages):
+pipelineLayout(),
+graphicsPipeline()
 {
     createGraphicsPipeline(renderer, stages);
 }
 
-void GraphicsPipeline::destroy(Renderer* renderer)
-{
-    renderer->device.destroyPipelineLayout(pipelineLayout);
-    renderer->device.destroyPipeline(graphicsPipeline);
-}
 
-void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo> stages)
+void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages)
 {
 
     // Get Vertex State Input Info
-    VertexInputDescription description = Vertex::getVertexInputDescription();
+    VertexInputDescription descriptions = Vertex::getVertexInputDescription();
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
-    vertexInputInfo.pVertexAttributeDescriptions = description.attributesDescriptions.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = description.attributesDescriptions.size();
-    vertexInputInfo.pVertexBindingDescriptions = description.bindingsDescriptions.data();
-    vertexInputInfo.vertexAttributeDescriptionCount = description.bindingsDescriptions.size();
+    vertexInputInfo.pVertexAttributeDescriptions = descriptions.attributesDescriptions.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(descriptions.attributesDescriptions.size());
+    vertexInputInfo.pVertexBindingDescriptions = descriptions.bindingsDescriptions.data();
+    vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(descriptions.bindingsDescriptions.size());
 
 
     // Get Input Assembly State Info
@@ -71,15 +68,14 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     vk::Viewport viewport;
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)renderer->swapchainExtent.width;
-    viewport.height = (float)renderer->swapchainExtent.height;
+    viewport.width = (float)renderer->getSwapchainExtent().width;
+    viewport.height = (float)renderer->getSwapchainExtent().height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     vk::Rect2D scissor;
     scissor.offset = 0;
-    scissor.extent = renderer->swapchainExtent;
-
+    scissor.extent = renderer->getSwapchainExtent();
 
     vk::PipelineViewportStateCreateInfo viewportInfo = {};
     viewportInfo.sType = vk::StructureType::ePipelineViewportStateCreateInfo;
@@ -125,15 +121,18 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-
     vk::Result result = renderer->device.createGraphicsPipelines(VK_NULL_HANDLE,
                                                                  1,
                                                                  &pipelineInfo,
                                                                  nullptr,
                                                                  &graphicsPipeline);
-    if (result != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Could not create a graphics pipeline");
-    }
 
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,result == vk::Result::eSuccess, "Pipeline initialisation failed." );
+
+
+}
+
+void GraphicsPipeline::cleanUp(Renderer* renderer) const {
+    renderer->device.destroyPipelineLayout(pipelineLayout);
+    renderer->device.destroyPipeline(graphicsPipeline);
 }

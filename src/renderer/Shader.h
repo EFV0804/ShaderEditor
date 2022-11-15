@@ -2,27 +2,68 @@
 // Created by elise on 22/09/2022.
 //
 
-#ifndef SHADEREDITOR_SHADER_H
-#define SHADEREDITOR_SHADER_H
+#pragma once
+
 #include <vulkan/vulkan.hpp>
 #include <vector>
 #include <string>
+#include "Renderer.h"
 
 class Shader {
 public:
-    Shader(vk::Device device, std::string filename, vk::ShaderStageFlagBits stage);
-    Shader();
-    ~Shader();
+    Shader(Renderer* renderer, std::string filename, vk::ShaderStageFlagBits stage);
+    Shader() = delete;
+    Shader& operator=(const Shader&) = delete;
+    ~Shader() = default;
 
+    /*!
+     * \brief Getter for module member variable.
+     * \return vk::ShaderModule module
+     */
+    const vk::ShaderModule& getModule() const {return module;}
+    /*!
+     * \brief Getter for shader stage mebmer variable.
+     * \return vk::ShaderStageFlagBits stage
+     */
+    const vk::ShaderStageFlagBits& getStage() const {return stage;}
+    /*!
+     * \brief Call Vulkan function to destroy vk::ShaderModule
+     *
+     * \note This function is to be added to the main deletion queue.
+     */
+    void cleanUp();
+private:
+
+    /*
+     * path to the shader file.
+     */
     std::string filename;
-    vk::Device device;
-    vk::ShaderModule module;
+    /*
+     * Pointer to renderer.
+     */
+    Renderer* renderer;
+    /*
+     *  The flag bit corresponding to the shader stage: ie: e::Vertex, e::Fragment etc.
+     */
     vk::ShaderStageFlagBits stage;
+    /*
+     * Vector to hold shader code, to be stored in shader module
+     */
+    std::vector<char> shaderCode;
+    /*
+     * Shader Module that holds all information about the shader, used by the pipeline initialisation process.
+     */
+    vk::ShaderModule module;
+    /*!
+     * \brief Reads binary code from shader file found at the location of fileName
+     * \return std::vector<char> shader code
+     */
+    std::vector<char> getShaderCode();
+    /*!
+     * \brief makes vk::ShaderModule
+     * \return vk::ShaderModule
+     * \note Must be called after the shader code has been read and stored in member variable shaderCode.
+     */
+    vk::ShaderModule makeModule();
 
-    static std::vector<char> readShaderFile(const std::string& filename);
-    void setShaderModule();
-    void createShaderModule(std::vector<char> shaderCode);
 };
-
-
-#endif //SHADEREDITOR_SHADER_H

@@ -7,9 +7,6 @@ target_include_directories(shaderEditor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # add renderer folder and link renderer lib with main exec
 add_subdirectory(renderer)
 add_subdirectory(ui)
-target_link_libraries(shaderEditor PRIVATE renderer)
+add_subdirectory(core)
+target_link_libraries(shaderEditor PRIVATE renderer core glfw)
 target_link_libraries(shaderEditor PRIVATE ui)
-
-
-
-

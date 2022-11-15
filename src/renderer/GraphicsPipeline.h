@@ -7,22 +7,36 @@ class Renderer;
 class GraphicsPipeline
 {
 public:
-    GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo> stages);
-    GraphicsPipeline() = default;
+    GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages);
+    GraphicsPipeline() = delete;
+    GraphicsPipeline &operator=(const GraphicsPipeline &) = delete;
 	~GraphicsPipeline() = default;
 
-    void destroy(Renderer* renderer);
-	void draw();
-
-    vk::Pipeline getPipeline(){return graphicsPipeline;}
+    /*!
+     * \brief Getter function for vk::Pipeline member var.
+     * \return vk::Pipeline
+     */
+    const vk::Pipeline& getPipeline() const {return graphicsPipeline;}
+    /*!
+     * \brief Calls Vulkan function to destroy vk::Pipeline and vk::PipelineLayout
+     * \param renderer
+     */
+    void cleanUp(Renderer* renderer) const;
 
 private:
+    /*
+     * Pipeline Layout, allows to specify uniforms, push constants in shader code.
+     * Right now this is a 'blank' pipeline layout until implemention of push constants etc.
+     * //TODO Create vk::PipelineLayout based uniforms present in shader code. Using SPIRV-Cross
+     */
 	vk::PipelineLayout pipelineLayout;
+    /*
+     * The pipeline :)
+     */
 	vk::Pipeline graphicsPipeline;
 
-//	vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
-	void addShaders();
-    void createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo> stages);
+    void createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages);
+
 
 };
 

@@ -4,31 +4,28 @@
 
 #include <fstream>
 #include "Shader.h"
-Shader::Shader(vk::Device device, std::string filename,vk::ShaderStageFlagBits stage):
-device{device},
+
+Shader::Shader(Renderer* renderer, std::string filename,vk::ShaderStageFlagBits stage):
+renderer{renderer},
 filename{filename},
-stage{stage}{
-    setShaderModule();
+stage{stage},
+shaderCode{getShaderCode()},
+module{makeModule()}{
+
 }
-Shader::Shader(){
-    //TODO load default shader
-}
-void Shader::createShaderModule(std::vector<char> shaderCode)
-{
+
+
+vk::ShaderModule Shader::makeModule() {
+
     vk::ShaderModuleCreateInfo shaderModuleCreateInfo{};
     shaderModuleCreateInfo.sType = vk::StructureType::eShaderModuleCreateInfo;
     shaderModuleCreateInfo.codeSize = shaderCode.size();
     shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
-    module = device.createShaderModule(shaderModuleCreateInfo);
+    return renderer->device.createShaderModule(shaderModuleCreateInfo);
 }
 
-void Shader::setShaderModule() {
-    std::vector<char> shaderCode = readShaderFile(filename);
-    createShaderModule(shaderCode);
-}
-
-std::vector<char> Shader::readShaderFile(const std::string &filename) {
+std::vector<char> Shader::getShaderCode() {
     // Open shader file
     // spv files are binary data, put the pointer at the end of the file to get its size
     std::ifstream file{ filename, std::ios::binary | std::ios::ate };
@@ -46,6 +43,6 @@ std::vector<char> Shader::readShaderFile(const std::string &filename) {
     return fileBuffer;
 }
 
-Shader::~Shader(){
-    device.destroyShaderModule(module);
+void Shader::cleanUp(){
+    renderer->device.destroyShaderModule(module);
 }

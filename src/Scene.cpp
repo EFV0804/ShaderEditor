@@ -6,31 +6,41 @@
 #include "Mesh.h"
 #include "Material.h"
 
-Scene::Scene() = default;
+Scene::Scene(){
+
+};
 
 Scene::~Scene() = default;
 
 void Scene::load(Renderer* renderer) {
-    Mesh triangleMesh = Mesh();
-    Material triangleMaterial = Material();
 
-    triangleMaterial.addShader(renderer->device,
-                       "../../assets/shaders/compiled/shader.vert.spv",
-                       vk::ShaderStageFlagBits::eVertex);
-    triangleMaterial.addShader(renderer->device,
-                       "../../assets/shaders/compiled/shader.frag.spv",
-                       vk::ShaderStageFlagBits::eFragment);
-    triangleMaterial.addPipeline(renderer);
+    ShaderInfo vertInfo{"../../assets/shaders/compiled/shader.vert.spv",
+                        vk::ShaderStageFlagBits::eVertex};
+    ShaderInfo fragInfo{"../../assets/shaders/compiled/shader.frag.spv",
+                        vk::ShaderStageFlagBits::eFragment};
 
-    Renderable triangle = Renderable(&triangleMesh, &triangleMaterial);
+    std::vector<ShaderInfo> shadersInfo;
+    shadersInfo.reserve(2);
+    shadersInfo.push_back(vertInfo);
+    shadersInfo.push_back(fragInfo);
 
-    renderables.emplace_back(triangle);
+    materials.emplace_back(renderer, shadersInfo, "triangleMat");
+    meshes.emplace_back();
+    renderables.emplace_back(meshes.back(), materials.back());
+    renderer->loadMeshes(&renderables);
+
+
+    // ----------- ADD TO DELETION QUEUE ----------------
+    for(auto material : materials){
+        sceneDeletionQueue.push_function([=]() {material.cleanUp();});
+    }
 }
 
 void Scene::draw(Renderer* renderer){
     renderer->draw(&renderables);
 }
 
-void Scene::close() {
-
+void Scene::cleanUp(Renderer* renderer) {
+    renderer->device.waitIdle();
+    sceneDeletionQueue.flush();
 }

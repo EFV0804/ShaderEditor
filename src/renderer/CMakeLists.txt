@@ -6,7 +6,7 @@ message("generating renderer")
 #message(${ENGINE_SRC_FILES})
 
 # make renderer library
-add_library(renderer SHARED ${ENGINE_SRC_FILES} Allocator.cpp Allocator.h)
+add_library(renderer STATIC ${ENGINE_SRC_FILES})
 # include current source to library
 target_include_directories(renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -14,4 +14,4 @@ target_include_directories(renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Vulkan REQUIRED)
 message(STATUS ${Vulkan_LIBRARY})
 
-target_link_libraries(renderer glm glfw Vulkan::Vulkan vma)
+target_link_libraries(renderer core glm glfw Vulkan::Vulkan)

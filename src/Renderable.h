@@ -1,23 +1,25 @@
 //
 // Created by elise on 26/09/2022.
 //
+#pragma once
 
-#ifndef SHADEREDITOR_RENDERABLE_H
-#define SHADEREDITOR_RENDERABLE_H
 #include "Mesh.h"
 #include "Material.h"
 
 class Renderable {
 public:
-    Renderable() = default;
-    Renderable(Mesh* pMesh, Material* pMaterial);
+    Renderable() = delete;
+    Renderable &operator=(const Renderable&) = delete;
+    Renderable(const Mesh& pMesh, const Material& pMaterial);
     ~Renderable() = default;
 
-    Mesh* mesh = nullptr;
-    Material* material = nullptr;
+    const Material* getMaterial() const {return &material;}
+    const Mesh* getMesh() const {return &mesh;}
+
+private:
+    const std::string meshName;
+    const Mesh& mesh;
+    const Material& material;
 
     void load();
 };
-
-
-#endif //SHADEREDITOR_RENDERABLE_H
