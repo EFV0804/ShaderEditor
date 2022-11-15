@@ -132,8 +132,7 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
 
 }
 
-void GraphicsPipeline::cleanUp(Renderer* renderer)
-{
+void GraphicsPipeline::cleanUp(Renderer* renderer) const {
     renderer->device.destroyPipelineLayout(pipelineLayout);
     renderer->device.destroyPipeline(graphicsPipeline);
 }
