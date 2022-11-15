@@ -5,6 +5,8 @@
 #include "Logger.h"
 #include <string>
 #include "Material.h"
+#include "Mesh.h"
+#include "Renderable.h"
 //#include "Scene.h"
 
 
@@ -45,6 +47,10 @@ int main() {
 
     Material triangleMat{&renderer, shadersInfo, "triangleMat" };
 
+    Mesh m{};
+    std::vector<Renderable> renderables;
+    renderables.emplace_back(&m, &triangleMat);
+    renderer.loadMeshes(&renderables);
     //----------------------------------------
 //    Scene sceneExample{};
 //    sceneExample.load(&renderer);
@@ -52,7 +58,7 @@ int main() {
     while (!glfwWindowShouldClose(renderer.window)) {
         glfwPollEvents();
 //        sceneExample.draw(&renderer);
-        renderer.draw();
+        renderer.draw(&renderables);
     }
 
     renderer.cleanUp();
