@@ -117,10 +117,10 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
 void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
     //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
 
-    Material* lastMaterial = nullptr;
+    const Material* lastMaterial = nullptr;
 
     for(int i = 0; i < renderables->size(); i++){
-        Material* current_mat = renderables->at(i).getMaterial();
+        const Material* current_mat = renderables->at(i).getMaterial();
 
         if(current_mat != lastMaterial){
 //            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
