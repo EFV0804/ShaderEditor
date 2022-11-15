@@ -126,10 +126,9 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
                                                                  &pipelineInfo,
                                                                  nullptr,
                                                                  &graphicsPipeline);
-    if (result != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Could not create a graphics pipeline");
-    }
+
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,result == vk::Result::eSuccess, "Pipeline initialisation failed." );
+
 
 }
 
