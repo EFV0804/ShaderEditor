@@ -14,13 +14,14 @@ public:
 	~GraphicsPipeline() = default;
 
     const vk::Pipeline& getPipeline() const {return graphicsPipeline;}
+    void cleanUp(Renderer* renderer);
 
 private:
 	vk::PipelineLayout pipelineLayout;
 	vk::Pipeline graphicsPipeline;
 
     void createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages);
-    void destroy(Renderer* renderer);
+
 
 };
 

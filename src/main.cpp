@@ -4,7 +4,7 @@
 #include "Renderer.h"
 #include "Logger.h"
 #include <string>
-
+#include "Material.h"
 //#include "Scene.h"
 
 
@@ -13,14 +13,14 @@
  */
 void loggingExample(){
 // ***************--- LOGGING EXAMPLE ---************//
-    int a = 5;
-    SD_RENDERER_INFO("Test info message VAR{0}", a);
-    SD_RENDERER_WARN("Test warning message");
-    SD_RENDERER_ERROR("Test error message");
-    SD_RENDERER_DEBUG("Test debug message");
-    SD_RENDERER_CRITICAL("Test critical message");
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, a>5, "a is inferior to 5");
-    SD_INTERNAL_ASSERT_NO_MSG(_RENDERER_, a>5);
+//    int a = 5;
+//    SD_RENDERER_INFO("Test info message VAR{0}", a);
+//    SD_RENDERER_WARN("Test warning message");
+//    SD_RENDERER_ERROR("Test error message");
+//    SD_RENDERER_DEBUG("Test debug message");
+//    SD_RENDERER_CRITICAL("Test critical message");
+//    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, a>5, "a is inferior to 5");
+//    SD_INTERNAL_ASSERT_NO_MSG(_RENDERER_, a>5);
 // **************************************************//
 }
 int main() {
@@ -31,6 +31,21 @@ int main() {
 
     Renderer renderer;
     if (renderer.init() == EXIT_FAILURE) return EXIT_FAILURE;
+
+    // ---------MATERIAL TEST ZONE ------------
+    ShaderInfo vertInfo{"../../assets/shaders/compiled/shader.vert.spv",
+                        vk::ShaderStageFlagBits::eVertex};
+    ShaderInfo fragInfo{"../../assets/shaders/compiled/shader.frag.spv",
+                        vk::ShaderStageFlagBits::eFragment};
+
+    std::vector<ShaderInfo> shadersInfo;
+    shadersInfo.reserve(2);
+    shadersInfo.push_back(vertInfo);
+    shadersInfo.push_back(fragInfo);
+
+    Material triangleMat{&renderer, shadersInfo, "triangleMat" };
+
+    //----------------------------------------
 //    Scene sceneExample{};
 //    sceneExample.load(&renderer);
 
@@ -40,7 +55,6 @@ int main() {
         renderer.draw();
     }
 
-    //TODO add to Renderer destructor
     renderer.cleanUp();
 
     return 0;

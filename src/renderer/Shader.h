@@ -2,27 +2,35 @@
 // Created by elise on 22/09/2022.
 //
 
-#ifndef SHADEREDITOR_SHADER_H
-#define SHADEREDITOR_SHADER_H
+#pragma once
+
 #include <vulkan/vulkan.hpp>
 #include <vector>
 #include <string>
+#include "Renderer.h"
 
 class Shader {
 public:
-    Shader(vk::Device device, std::string filename, vk::ShaderStageFlagBits stage);
+    Shader(Renderer* renderer, std::string filename, vk::ShaderStageFlagBits stage);
     Shader() = delete;
-    ~Shader();
+//    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
+    ~Shader() = default;
+
+    const vk::ShaderModule& getModule() const {return module;}
+    const vk::ShaderStageFlagBits& getStage() const {return stage;}
+
+    void cleanUp();
+private:
 
     std::string filename;
-    vk::Device device;
-    vk::ShaderModule module;
+    Renderer* renderer;
     vk::ShaderStageFlagBits stage;
+    std::vector<char> shaderCode;
+    vk::ShaderModule module;
 
-    static std::vector<char> readShaderFile(std::string filename);
-    void setShaderModule();
-    void createShaderModule(std::vector<char> shaderCode);
+
+    std::vector<char> getShaderCode();
+    vk::ShaderModule makeModule();
+
 };
-
-
-#endif //SHADEREDITOR_SHADER_H

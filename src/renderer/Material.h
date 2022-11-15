@@ -2,8 +2,7 @@
 // Created by elise on 26/09/2022.
 //
 
-#ifndef SHADEREDITOR_MATERIAL_H
-#define SHADEREDITOR_MATERIAL_H
+#pragma once
 #include "Shader.h"
 #include "GraphicsPipeline.h"
 #include <vector>
@@ -16,20 +15,21 @@ struct ShaderInfo{
 
 class Material {
 public:
-    Material(std::vector<ShaderInfo>, Renderer* renderer);
-    Material() = default;
-    ~Material();
+    Material(Renderer* pRenderer, std::vector<ShaderInfo> shadersInfo, std::string pName);
+    Material() = delete;
+    ~Material() = default;
+    Material(const Material&) = delete;
+    Material& operator=(const Material&) = delete;
 
-    std::vector<Shader*> shaders;
+    std::string name;
+
+private:
+    Renderer* renderer;
+    std::vector<Shader> loadShaders(std::vector<ShaderInfo> info);
+    GraphicsPipeline loadPipeline();
+    std::vector<Shader> shaders;
     GraphicsPipeline pipeline;
 
-    void addShaders(Renderer* renderer, std::vector<ShaderInfo> shadersInfo);
-    void addShader(vk::Device device, std::string filename, vk::ShaderStageFlagBits stage);
-    void addPipeline(Renderer* renderer);
-    std::vector<vk::PipelineShaderStageCreateInfo> getShaderStages();
-    void load();
-    void destroy(vk::Device device);
+    void cleanUp();
+
 };
-
-
-#endif //SHADEREDITOR_MATERIAL_H

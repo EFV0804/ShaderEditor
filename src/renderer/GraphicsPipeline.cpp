@@ -9,11 +9,6 @@ graphicsPipeline()
     createGraphicsPipeline(renderer, stages);
 }
 
-void GraphicsPipeline::destroy(Renderer* renderer)
-{
-    renderer->device.destroyPipelineLayout(pipelineLayout);
-    renderer->device.destroyPipeline(graphicsPipeline);
-}
 
 void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages)
 {
@@ -82,7 +77,6 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     scissor.offset = 0;
     scissor.extent = renderer->getSwapchainExtent();
 
-
     vk::PipelineViewportStateCreateInfo viewportInfo = {};
     viewportInfo.sType = vk::StructureType::ePipelineViewportStateCreateInfo;
     viewportInfo.pNext = nullptr;
@@ -137,4 +131,10 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
         throw std::runtime_error("Could not create a graphics pipeline");
     }
 
+}
+
+void GraphicsPipeline::cleanUp(Renderer* renderer)
+{
+    renderer->device.destroyPipelineLayout(pipelineLayout);
+    renderer->device.destroyPipeline(graphicsPipeline);
 }
