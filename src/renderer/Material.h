@@ -59,6 +59,8 @@ private:
      * store shaders needed for rendering of this material.
      */
     std::vector<Shader> shaders;
+
+public:
     /*
      * The pipeline used to render.
      */
