@@ -22,7 +22,7 @@ void Buffer::map(vk::Device &device, int offset, uint64_t dataSize) {
 
     SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Allocated,
                                 "Buffer memory not allocated, can't map unallocated memory.");
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Mapped, "Buffer memory is already mapped")
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state != BufferState::Mapped, "Buffer memory is already mapped")
     bufferStart = static_cast<float *>(device.mapMemory(bufferMemory, offset, dataSize));
     state = BufferState::Mapped;
 
