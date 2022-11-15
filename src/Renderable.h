@@ -10,16 +10,16 @@ class Renderable {
 public:
     Renderable() = delete;
     Renderable &operator=(const Renderable&) = delete;
-    Renderable(Mesh* pMesh, Material* pMaterial);
+    Renderable(const Mesh& pMesh, const Material& pMaterial);
     ~Renderable() = default;
 
-    Material* getMaterial() const {return material;}
-    Mesh* getMesh() const {return mesh;}
+    const Material* getMaterial() const {return &material;}
+    const Mesh* getMesh() const {return &mesh;}
 
 private:
     const std::string meshName;
-    Mesh* mesh;
-    Material* material;
+    const Mesh& mesh;
+    const Material& material;
 
     void load();
 };
