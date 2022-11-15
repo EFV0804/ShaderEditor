@@ -2,8 +2,7 @@
 // Created by elise on 26/09/2022.
 //
 
-#ifndef SHADEREDITOR_MESH_H
-#define SHADEREDITOR_MESH_H
+#pragma once
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 #include <vector>
@@ -25,10 +24,11 @@ struct Vertex {
 class Mesh {
 public:
     Mesh() = default;
+    Mesh(const Mesh&) = delete;
+    Mesh &operator=(const Mesh&) = delete;
     ~Mesh() = default;
 
 //    const int numElements = 3;
-
 
     const std::vector<Vertex> vertices = {
             {{0.0, -0.4, 0.0}, {1.0, 0.0, 0.0}},
@@ -39,6 +39,3 @@ public:
     void upload( Buffer* vertexBuffer);
 
 };
-
-
-#endif //SHADEREDITOR_MESH_H
