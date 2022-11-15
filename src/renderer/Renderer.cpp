@@ -3,16 +3,7 @@
 #include <iostream>
 #include <GLFW/glfw3.h>
 #include <string>
-//#include "../Renderable.h"
-
-//Renderer::Renderer(): vertexBuffer(vk::BufferUsageFlagBits::eVertexBuffer, 5000000)
-//{
-//
-//}
-
-//Renderer::~Renderer()
-//{
-//}
+#include "../Renderable.h"
 
 
 int Renderer::init() {
@@ -30,7 +21,6 @@ int Renderer::init() {
         initFramebuffers();
         initVertexBuffer();
         initCommandBuffers();
-////        createSyncStructures();
         createSynchronisation();
     }
     catch (const std::runtime_error &e) {
@@ -44,101 +34,6 @@ int Renderer::init() {
 
 //// DRAW
 void Renderer::draw(std::vector<Renderable> *renderables) {
-//    // BEGIN FRAME
-//    device.waitForFences(getCurrentFrame().renderFence, VK_TRUE, 1000000000);
-//    device.resetFences(getCurrentFrame().renderFence);
-//    getCurrentFrame().commandBuffer.reset();
-//
-//    uint32_t imageToBeDrawnIndex;
-//
-//    vk::ResultValue result = device.acquireNextImageKHR(swapchain,
-//                                                        1000000000,
-//                                                        getCurrentFrame().presentSemaphore,
-//                                                        VK_NULL_HANDLE);
-//    imageToBeDrawnIndex = result.value;
-//
-//    // BEGIN COMMAND INFO
-//    vk::CommandBufferBeginInfo commandBufferBeginInfo{};
-//    commandBufferBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
-//    commandBufferBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-//    getCurrentFrame().commandBuffer.begin(commandBufferBeginInfo);
-//
-//    // RENDERPASS BEGIN
-//    vk::RenderPassBeginInfo renderPassBeginInfo{};
-//    renderPassBeginInfo.sType = vk::StructureType::eRenderPassBeginInfo;
-//    renderPassBeginInfo.renderPass = renderPass;
-//    renderPassBeginInfo.renderArea.offset.x = 0;
-//    renderPassBeginInfo.renderArea.offset.y = 0;
-//    renderPassBeginInfo.renderArea.extent = swapchainExtent;
-//    renderPassBeginInfo.framebuffer = swapchainFramebuffers.at(imageToBeDrawnIndex);
-//
-//    const vk::ClearValue clearValues{
-//            std::array<float,4>{0.f, 0.f, .4f, 1.0f}
-//    };
-//
-//    renderPassBeginInfo.pClearValues = &clearValues;
-//    renderPassBeginInfo.clearValueCount = 1;
-//
-//    getCurrentFrame().commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-//
-//    // DRAW OBJECTS
-//    drawRenderables(renderables);
-//    // RENDERPASS END
-//    getCurrentFrame().commandBuffer.endRenderPass();
-//    // ADD COMMAND BUFFER
-//    getCurrentFrame().commandBuffer.end();
-//
-//    // SUBMIT INFO
-//    vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
-//
-//    vk::SubmitInfo submitInfo{};
-//    submitInfo.sType = vk::StructureType::eSubmitInfo;
-//    submitInfo.waitSemaphoreCount = 1;
-//    submitInfo.pWaitSemaphores = &getCurrentFrame().presentSemaphore;
-//    submitInfo.pWaitDstStageMask = waitStages;
-//    submitInfo.commandBufferCount = 1;
-//    submitInfo.pCommandBuffers = &getCurrentFrame().commandBuffer;
-//    submitInfo.signalSemaphoreCount = 1;
-//    submitInfo.pSignalSemaphores = &getCurrentFrame().renderSemaphore;
-//
-//    graphicsQueue.submit(submitInfo, getCurrentFrame().renderFence);
-//
-//
-//    // PRESENTATION
-//    vk::PresentInfoKHR presentInfo{};
-//    presentInfo.sType = vk::StructureType::ePresentInfoKHR;
-//    presentInfo.waitSemaphoreCount = 1;
-//    presentInfo.pWaitSemaphores =  &getCurrentFrame().renderSemaphore;
-//    presentInfo.swapchainCount = 1;
-//    presentInfo.pSwapchains = &swapchain;
-//    presentInfo.pImageIndices = &imageToBeDrawnIndex;
-//
-//    graphicsQueue.presentKHR(presentInfo);
-//
-//    //NEXT FRAME INCREMENT
-//    currentFrame = (currentFrame + 1) % MAX_FRAME_DRAWS;
-//}
-//
-//void Renderer::drawRenderables(std::vector<Renderable>* renderables){
-//    //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
-//
-//    Material* lastMaterial = nullptr;
-//
-//    for(auto renderable : *renderables){
-//        if(&renderable.material != lastMaterial){
-////            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
-//            getCurrentFrame().commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, renderable.material.pipeline.getPipeline());
-//            lastMaterial = &renderable.material;
-//        }
-//        VkDeviceSize offset = 0;
-//        getCurrentFrame().commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
-//        getCurrentFrame().commandBuffer.draw(renderable.mesh.vertices.size(), 1, 0,0);
-//
-//    }
-//
-}
-
-void Renderer::draw() {
 //******************--- START NEW FRAME ---******************//
     vk::Result result = device.waitForFences(getCurrentFrame()->renderFence, VK_TRUE, 1000000000);
     SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, result == vk::Result::eSuccess,
@@ -179,7 +74,7 @@ void Renderer::draw() {
     getCurrentFrame()->commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
 //******************--- DRAW OBJECTS ---********************//
-//    drawRenderables(renderables);
+    drawRenderables(renderables);
 
 //******************--- RENDER PASS ENDS ---*****************//
     getCurrentFrame()->commandBuffer.endRenderPass();
@@ -222,20 +117,21 @@ void Renderer::draw() {
 void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
     //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
 
-//    Material* lastMaterial = nullptr;
-//
-//    for(auto renderable : *renderables){
-//        if(&renderable.material != lastMaterial){
-////            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
-//            getCurrentFrame().commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, renderable.material.pipeline.getPipeline());
-//            lastMaterial = &renderable.material;
-//        }
-//        VkDeviceSize offset = 0;
-//        getCurrentFrame().commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
-//        getCurrentFrame().commandBuffer.draw(renderable.mesh.vertices.size(), 1, 0,0);
-//
-//    }
+    Material* lastMaterial = nullptr;
 
+    for(int i = 0; i < renderables->size(); i++){
+        Material* current_mat = renderables->at(i).getMaterial();
+
+        if(current_mat != lastMaterial){
+//            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
+            getCurrentFrame()->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, current_mat->pipeline.getPipeline());
+            lastMaterial = current_mat;
+        }
+        VkDeviceSize offset = 0;
+        getCurrentFrame()->commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
+        getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
+
+    }
 }
 
 void Renderer::initWindow() {
@@ -761,18 +657,18 @@ void Renderer::cleanUp() {
     glfwTerminate();
 
     instance.destroy();
+    SD_RENDERER_INFO("Renderer clean up successful");
 
 }
 
 void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 //    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
-////    vertexBuffer.map(this, 0);
-//
-//    for(auto renderable : *renderables){
-//        vertexBuffer.map(this, 0, renderable.mesh.getSize());
-//        vertexBuffer.copy(renderable.mesh.vertices.data(), renderable.mesh.getSize());
-//        vertexBuffer.unMap(this);
-//    }
+
+    for(int i = 0; i < renderables->size(); i++){
+        vertexBuffer.map(this->device, 0, renderables->at(i).getMesh()->getSize());
+        vertexBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
+        vertexBuffer.unMap(this->device);
+    }
 }
 
 void Renderer::initVertexBuffer() {
