@@ -116,15 +116,15 @@ public:
  * \brief Returns the render pass
  */
     const vk::RenderPass& getRenderPass() const { return renderPass; }
+    /**
+ * Deletion queue used to ensure destruction of Vulkan entities. Uses FIFO logic.
+ */
+    DeletionQueue mainDeletionQueue;
 private:
     /**
     * Vulkan instance
     */
     vk::Instance instance;
-    /**
-     * Deletion queue used to ensure destruction of Vulkan entities. Uses FIFO logic.
-     */
-    DeletionQueue mainDeletionQueue;
     /**
     * indicates the number corresponding to the current frame. Equivalent to currentFrame % MAX_FRAME_DRAWS.
     */
