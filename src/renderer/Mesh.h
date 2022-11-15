@@ -24,7 +24,7 @@ struct Vertex {
 class Mesh {
 public:
     Mesh() = default;
-    Mesh(const Mesh&) = delete;
+//    Mesh(const Mesh&) = delete;
     Mesh &operator=(const Mesh&) = delete;
     ~Mesh() = default;
 
@@ -35,7 +35,7 @@ public:
             {{0.4, 0.4, 0.0}, {0.0, 1.0, 0.0}},
             {{-0.4, 0.4, 0.0}, {0.0, 0.0, 1.0}}
     };
-    uint64_t getSize(){return vertices.size() * sizeof(Vertex);}
+    uint64_t getSize() const {return vertices.size() * sizeof(Vertex);}
     void upload( Buffer* vertexBuffer);
 
 };
