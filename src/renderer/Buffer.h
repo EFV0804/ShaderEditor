@@ -39,7 +39,7 @@ public:
      * \brief Initialises the vk::Buffer object
      * \param renderer
      */
-    void init(uint32_t queueFamilyIndex, vk::Device &device);
+    void init(uint32_t queueFamilyIndex);
     /*!
      * \brief Maps memory of the requested size at the right offset and store a pointer to that memory in BufferStart.
      *
@@ -47,26 +47,26 @@ public:
      * \param offset
      * \param dataSize
      */
-    void map(vk::Device &device, int offset, uint64_t dataSize);
+    void map(int offset, uint64_t dataSize);
     /*!
      * \brief Unmaps the buffer's map memory.
      *
      * \param device
      */
-    void unMap(vk::Device &device);
+    void unMap();
     /*!
      * \brief Allocates memory for the buffer.
      * \param memoryTypeIndex
      * \param device
      */
-    void allocate(uint32_t memoryTypeIndex, vk::Device &device);
+    void allocate(uint32_t memoryTypeIndex);
     /*!
      * \brief Binds memory to the buffer
      *
      * \param device
      * \param memoryOffset
      */
-    void bind(vk::Device &device, int memoryOffset = 0);
+    void bind(int memoryOffset = 0);
     /*!
      * \brief copies memory content from src pointer to buffer's start pointer. Uses memcpy.
      * \param src a pointer to the beginning of the memory of th source data to copy
@@ -77,7 +77,7 @@ public:
      * \brief Destroy vk::Buffer object, frees memory and set Buffer object state to BufferState::Destroyed
      * \param device
      */
-    void destroy(vk::Device& device);
+    void destroy();
     /*!
      * \brief util getter for vk::Buffer member
      * \return member buffer

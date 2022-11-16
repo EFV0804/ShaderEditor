@@ -5,8 +5,7 @@
 #include <fstream>
 #include "Shader.h"
 
-Shader::Shader(Renderer* renderer, std::string filename,vk::ShaderStageFlagBits stage):
-renderer{renderer},
+Shader::Shader(std::string filename, vk::ShaderStageFlagBits stage) :
 filename{filename},
 stage{stage},
 shaderCode{getShaderCode()},
@@ -22,7 +21,7 @@ vk::ShaderModule Shader::makeModule() {
     shaderModuleCreateInfo.codeSize = shaderCode.size();
     shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
-    return renderer->device.createShaderModule(shaderModuleCreateInfo);
+    return Renderer::Get().device.createShaderModule(shaderModuleCreateInfo);
 }
 
 std::vector<char> Shader::getShaderCode() {
@@ -44,5 +43,5 @@ std::vector<char> Shader::getShaderCode() {
 }
 
 void Shader::cleanUp(){
-    renderer->device.destroyShaderModule(module);
+    Renderer::Get().device.destroyShaderModule(module);
 }

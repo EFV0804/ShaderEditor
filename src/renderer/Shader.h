@@ -11,7 +11,7 @@
 
 class Shader {
 public:
-    Shader(Renderer* renderer, std::string filename, vk::ShaderStageFlagBits stage);
+    Shader(std::string filename, vk::ShaderStageFlagBits stage);
     Shader() = delete;
     Shader& operator=(const Shader&) = delete;
     ~Shader() = default;
@@ -38,10 +38,6 @@ private:
      * path to the shader file.
      */
     std::string filename;
-    /*
-     * Pointer to renderer.
-     */
-    Renderer* renderer;
     /*
      *  The flag bit corresponding to the shader stage: ie: e::Vertex, e::Fragment etc.
      */

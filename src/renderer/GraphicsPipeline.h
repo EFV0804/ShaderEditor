@@ -7,7 +7,7 @@ class Renderer;
 class GraphicsPipeline
 {
 public:
-    GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages);
+    GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages);
     GraphicsPipeline() = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &) = delete;
 	~GraphicsPipeline() = default;
@@ -21,7 +21,7 @@ public:
      * \brief Calls Vulkan function to destroy vk::Pipeline and vk::PipelineLayout
      * \param renderer
      */
-    void cleanUp(Renderer* renderer) const;
+    void cleanUp() const;
 
 private:
     /*
@@ -35,7 +35,7 @@ private:
      */
 	vk::Pipeline graphicsPipeline;
 
-    void createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages);
+    void createGraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo>& stages);
 
 
 };

@@ -53,13 +53,16 @@ struct DeletionQueue {
 class Renderer {
 public:
     Renderer() = default;
-//    Renderer() = default;
-
     Renderer(const Renderer &) = delete;
-
     Renderer &operator=(const Renderer &) = delete;
-
     ~Renderer() = default;
+
+    static Renderer& Get(){
+        static Renderer instance;
+        return instance;
+    }
+
+    bool isInit = false;
     /**
      * Point to the GLFW window.
      */

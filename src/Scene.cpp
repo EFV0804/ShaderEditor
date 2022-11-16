@@ -12,7 +12,7 @@ Scene::Scene(){
 
 Scene::~Scene() = default;
 
-void Scene::load(Renderer* renderer) {
+void Scene::load() {
 
     ShaderInfo vertInfo{"../../assets/shaders/compiled/shader.vert.spv",
                         vk::ShaderStageFlagBits::eVertex};
@@ -24,10 +24,10 @@ void Scene::load(Renderer* renderer) {
     shadersInfo.push_back(vertInfo);
     shadersInfo.push_back(fragInfo);
 
-    materials.emplace_back(renderer, shadersInfo, "triangleMat");
+    materials.emplace_back(shadersInfo, "triangleMat");
     meshes.emplace_back();
     renderables.emplace_back(meshes.back(), materials.back());
-    renderer->loadMeshes(&renderables);
+    Renderer::Get().loadMeshes(&renderables);
 
 
     // ----------- ADD TO DELETION QUEUE ----------------
@@ -36,11 +36,11 @@ void Scene::load(Renderer* renderer) {
     }
 }
 
-void Scene::draw(Renderer* renderer){
-    renderer->draw(&renderables);
+void Scene::draw() {
+    Renderer::Get().draw(&renderables);
 }
 
-void Scene::cleanUp(Renderer* renderer) {
-    renderer->device.waitIdle();
+void Scene::cleanUp() {
+    Renderer::Get().device.waitIdle();
     sceneDeletionQueue.flush();
 }

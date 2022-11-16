@@ -8,6 +8,7 @@
 
 int Renderer::init() {
 
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !isInit, "Renderer is already initialised, cannot be initialised twice.")
     initWindow();
     try {
         initInstance();
@@ -28,12 +29,16 @@ int Renderer::init() {
         return EXIT_FAILURE;
     }
     SD_RENDERER_INFO("Renderer initialised successfully");
+
+    isInit = true;
     return EXIT_SUCCESS;
 
 }
 
 //// DRAW
 void Renderer::draw(std::vector<Renderable> *renderables) {
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised, initialise before calling rendering functions")
+
 //******************--- START NEW FRAME ---******************//
     vk::Result result = device.waitForFences(getCurrentFrame()->renderFence, VK_TRUE, 1000000000);
     SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, result == vk::Result::eSuccess,
@@ -115,6 +120,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
 }
 
 void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised, initialise before calling rendering functions")
     //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
 
     const Material* lastMaterial = nullptr;
@@ -135,6 +141,7 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
 }
 
 void Renderer::initWindow() {
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !isInit, "Renderer is not initialised, initialise renderer before window initialisation.")
     //TODO Abstract GLFW code into a window class to allow easy replacement of GLFW if needed.
     SD_RENDERER_DEBUG("Window initialisation");
     std::string name = "The Best Window";
@@ -662,12 +669,13 @@ void Renderer::cleanUp() {
 }
 
 void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised.")
 //    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
 
     for(int i = 0; i < renderables->size(); i++){
-        vertexBuffer.map(this->device, 0, renderables->at(i).getMesh()->getSize());
+        vertexBuffer.map(0, renderables->at(i).getMesh()->getSize());
         vertexBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
-        vertexBuffer.unMap(this->device);
+        vertexBuffer.unMap();
     }
 }
 
@@ -675,11 +683,11 @@ void Renderer::initVertexBuffer() {
 
     SD_RENDERER_DEBUG("Initialising vertex buffer.");
     uint32_t memoryTypeIndex = getMemoryTypeIndex();
-    vertexBuffer.init(queueFamilyIndices.graphicsFamily, device);
-    mainDeletionQueue.push_function([=]() {vertexBuffer.destroy(device);});
+    vertexBuffer.init(queueFamilyIndices.graphicsFamily);
+    mainDeletionQueue.push_function([=]() {vertexBuffer.destroy();});
 
-    vertexBuffer.allocate(memoryTypeIndex, device);
-    vertexBuffer.bind(device);
+    vertexBuffer.allocate(memoryTypeIndex);
+    vertexBuffer.bind();
 
 }
 

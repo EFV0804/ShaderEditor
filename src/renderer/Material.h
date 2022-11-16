@@ -24,7 +24,7 @@ struct ShaderInfo{
  */
 class Material {
 public:
-    Material(Renderer* pRenderer, std::vector<ShaderInfo> shadersInfo, std::string pName);
+    Material(std::vector<ShaderInfo> shadersInfo, std::string pName);
     Material() = delete;
     ~Material() = default;
 //    Material(const Material&) = delete;
@@ -36,10 +36,6 @@ public:
     std::string name;
 
 private:
-    /*
-     * pointer to the renderer in charge of rendering this material
-     */
-    Renderer* renderer;
     /*!
      * \brief Initialises and stores Shader object in vector.
      *

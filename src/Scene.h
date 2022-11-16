@@ -16,9 +16,9 @@ public:
     ~Scene();
 
     std::vector<Renderable> renderables;
-    void load(Renderer* renderer);
-    void draw(Renderer* renderer);
-    void cleanUp(Renderer* renderer);
+    void load();
+    void draw();
+    void cleanUp();
     DeletionQueue sceneDeletionQueue;
 
 private:

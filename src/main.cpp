@@ -31,18 +31,20 @@ int main() {
     Logger::init();
 //    loggingExample();
 
-    Renderer renderer;
+//    Renderer renderer;
+    Renderer& renderer = Renderer::Get();
+
     if (renderer.init() == EXIT_FAILURE) return EXIT_FAILURE;
 
     Scene sceneExample{};
-    sceneExample.load(&renderer);
+    sceneExample.load();
 
     while (!glfwWindowShouldClose(renderer.window)) {
         glfwPollEvents();
-        sceneExample.draw(&renderer);
+        sceneExample.draw();
     }
 
-    sceneExample.cleanUp(&renderer);
+    sceneExample.cleanUp();
     renderer.cleanUp();
 
     return 0;

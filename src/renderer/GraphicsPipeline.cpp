@@ -2,15 +2,15 @@
 #include "Renderer.h"
 #include "Mesh.h"
 
-GraphicsPipeline::GraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages):
+GraphicsPipeline::GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages) :
 pipelineLayout(),
 graphicsPipeline()
 {
-    createGraphicsPipeline(renderer, stages);
+    createGraphicsPipeline(stages);
 }
 
 
-void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk::PipelineShaderStageCreateInfo>& stages)
+void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo>& stages)
 {
 
     // Get Vertex State Input Info
@@ -68,14 +68,14 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     vk::Viewport viewport;
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)renderer->getSwapchainExtent().width;
-    viewport.height = (float)renderer->getSwapchainExtent().height;
+    viewport.width = (float)Renderer::Get().getSwapchainExtent().width;
+    viewport.height = (float)Renderer::Get().getSwapchainExtent().height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     vk::Rect2D scissor;
     scissor.offset = 0;
-    scissor.extent = renderer->getSwapchainExtent();
+    scissor.extent = Renderer::Get().getSwapchainExtent();
 
     vk::PipelineViewportStateCreateInfo viewportInfo = {};
     viewportInfo.sType = vk::StructureType::ePipelineViewportStateCreateInfo;
@@ -103,7 +103,7 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     layoutInfo.pushConstantRangeCount = 0;
     layoutInfo.pPushConstantRanges = nullptr;
 
-    pipelineLayout = renderer->device.createPipelineLayout(layoutInfo);
+    pipelineLayout = Renderer::Get().device.createPipelineLayout(layoutInfo);
 
     vk::GraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = vk::StructureType::eGraphicsPipelineCreateInfo;
@@ -117,11 +117,11 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
     pipelineInfo.pMultisampleState = &multisamplingInfo;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = renderer->getRenderPass();
+    pipelineInfo.renderPass = Renderer::Get().getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    vk::Result result = renderer->device.createGraphicsPipelines(VK_NULL_HANDLE,
+    vk::Result result = Renderer::Get().device.createGraphicsPipelines(VK_NULL_HANDLE,
                                                                  1,
                                                                  &pipelineInfo,
                                                                  nullptr,
@@ -132,7 +132,7 @@ void GraphicsPipeline::createGraphicsPipeline(Renderer* renderer, std::vector<vk
 
 }
 
-void GraphicsPipeline::cleanUp(Renderer* renderer) const {
-    renderer->device.destroyPipelineLayout(pipelineLayout);
-    renderer->device.destroyPipeline(graphicsPipeline);
+void GraphicsPipeline::cleanUp() const {
+    Renderer::Get().device.destroyPipelineLayout(pipelineLayout);
+    Renderer::Get().device.destroyPipeline(graphicsPipeline);
 }

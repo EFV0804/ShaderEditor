@@ -6,8 +6,7 @@
 #include "Renderer.h"
 #include <utility>
 
-Material::Material(Renderer* pRenderer, std::vector<ShaderInfo> shadersInfo, std::string pName ):
-renderer{pRenderer},
+Material::Material(std::vector<ShaderInfo> shadersInfo, std::string pName) :
 shaders{loadShaders(shadersInfo)},
 pipeline{loadPipeline()},
 name{pName}{
@@ -19,7 +18,7 @@ std::vector<Shader> Material::loadShaders(std::vector<ShaderInfo> info){
     shaders.reserve(info.size());
 
     for(auto shaderInfo : info){
-        shaders.emplace_back(renderer, shaderInfo.fileName, shaderInfo.stage);
+        shaders.emplace_back( shaderInfo.fileName, shaderInfo.stage);
     }
 
     return shaders;
@@ -40,14 +39,14 @@ GraphicsPipeline Material::loadPipeline() {
         stages.emplace_back(shaderStageInfo);
     }
     //Copy elision, not call to copy constructor is made.
-    return GraphicsPipeline{renderer, stages};
+    return GraphicsPipeline{ stages};
 }
 
 void Material::cleanUp() const {
     for(auto shader : shaders){
         shader.cleanUp();
     }
-    pipeline.cleanUp(renderer);
+    pipeline.cleanUp();
 
 }
 
