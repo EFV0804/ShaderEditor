@@ -134,6 +134,17 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
             lastMaterial = current_mat;
         }
         VkDeviceSize offset = 0;
+
+        //Push constants
+        for(auto constant : renderables->at(i).getMaterial()->getPushConstants()){
+            getCurrentFrame()->commandBuffer.pushConstants(
+                    renderables->at(i).getMaterial()->pipeline.getLayout(),
+                    constant.stageFlags,
+                    constant.offset,
+                    constant.size,
+                    &renderables->at(i).transform);
+        }
+
         getCurrentFrame()->commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
         getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
 

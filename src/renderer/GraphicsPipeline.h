@@ -7,7 +7,7 @@ class Renderer;
 class GraphicsPipeline
 {
 public:
-    GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages);
+    GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages, std::vector<vk::PushConstantRange>& pushConstants);
     GraphicsPipeline() = delete;
     GraphicsPipeline &operator=(const GraphicsPipeline &) = delete;
 	~GraphicsPipeline() = default;
@@ -17,6 +17,7 @@ public:
      * \return vk::Pipeline
      */
     const vk::Pipeline& getPipeline() const {return graphicsPipeline;}
+    const vk::PipelineLayout& getLayout() const {return pipelineLayout;}
     /*!
      * \brief Calls Vulkan function to destroy vk::Pipeline and vk::PipelineLayout
      * \param renderer
@@ -35,7 +36,8 @@ private:
      */
 	vk::Pipeline graphicsPipeline;
 
-    void createGraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo>& stages);
+    void createGraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages,
+                                std::vector<vk::PushConstantRange> pushConstants);
 
 
 };

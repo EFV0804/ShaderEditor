@@ -17,6 +17,7 @@
 struct ShaderInfo{
     std::string fileName;
     vk::ShaderStageFlagBits stage;
+    bool hasPushConstant;
 };
 
 /*!
@@ -34,6 +35,7 @@ public:
      * Name of the material. Must be informed on initialisation.
      */
     std::string name;
+    const std::vector<vk::PushConstantRange>& getPushConstants() const {return pushConstants;}
 
 private:
     /*!
@@ -50,11 +52,12 @@ private:
      *
      * \return GraphicsPipeline
      */
-    GraphicsPipeline loadPipeline();
+    GraphicsPipeline loadPipeline(std::vector<ShaderInfo> shadersInfo);
     /*
      * store shaders needed for rendering of this material.
      */
     std::vector<Shader> shaders;
+    std::vector<vk::PushConstantRange> pushConstants;
 
 public:
     /*

@@ -14,10 +14,14 @@ Scene::~Scene() = default;
 
 void Scene::load() {
 
+    projection[1][1] *= -1;
+    glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians( 0.1f), glm::vec3(2, 1, 0));
+    glm::mat4 mesh_matrix = projection * view * model;
+
     ShaderInfo vertInfo{"../../assets/shaders/compiled/shader.vert.spv",
-                        vk::ShaderStageFlagBits::eVertex};
+                        vk::ShaderStageFlagBits::eVertex, true};
     ShaderInfo fragInfo{"../../assets/shaders/compiled/shader.frag.spv",
-                        vk::ShaderStageFlagBits::eFragment};
+                        vk::ShaderStageFlagBits::eFragment, false};
 
     std::vector<ShaderInfo> shadersInfo;
     shadersInfo.reserve(2);
@@ -26,7 +30,7 @@ void Scene::load() {
 
     materials.emplace_back(shadersInfo, "triangleMat");
     meshes.emplace_back();
-    renderables.emplace_back(meshes.back(), materials.back());
+    renderables.emplace_back(meshes.back(), materials.back(), mesh_matrix);
     Renderer::Get().loadMeshes(&renderables);
 
 
