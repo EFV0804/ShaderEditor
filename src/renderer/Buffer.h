@@ -29,9 +29,9 @@ public:
      * \param pSize
      *
      */
-    Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize);
+    Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize, vk::SharingMode sharingMode);
     Buffer() = delete;
-    Buffer(const Buffer&) = delete;
+//    Buffer(const Buffer&) = delete;
     Buffer &operator=(const Buffer&) = delete;
     ~Buffer() = default;
 
@@ -90,6 +90,7 @@ public:
      const vk::DeviceMemory& getDeviceMemory() const {return bufferMemory;}
 
 private:
+    vk::SharingMode sharingMode;
     /*
      * Used to store pointer for mapping memory
      */

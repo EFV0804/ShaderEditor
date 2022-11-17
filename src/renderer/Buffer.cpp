@@ -6,9 +6,10 @@
 #include "Renderer.h"
 #include <iostream>
 
-Buffer::Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize) :
-        usage(pUsage),
-        size(pSize) {
+Buffer::Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize, vk::SharingMode pSharingMode) :
+        usage{pUsage},
+        size{pSize},
+        sharingMode{pSharingMode}{
 
 }
 
@@ -70,7 +71,7 @@ vk::BufferCreateInfo Buffer::getBufferCreateInfo(const uint32_t queueFamilyIndic
     bufferInfo.usage = usage;
     bufferInfo.pQueueFamilyIndices = &queueFamilyIndices;
     bufferInfo.queueFamilyIndexCount = 1;
-    bufferInfo.sharingMode = vk::SharingMode::eExclusive;
+    bufferInfo.sharingMode = sharingMode;
     bufferInfo.pNext = nullptr;
 
     return bufferInfo;
