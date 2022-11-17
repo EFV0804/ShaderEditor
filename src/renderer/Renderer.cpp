@@ -4,7 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include "../Renderable.h"
-
+#include <algorithm>
+#include <numeric>
 
 int Renderer::init() {
 
@@ -22,6 +23,7 @@ int Renderer::init() {
         initFramebuffers();
         initVertexBuffer();
         initCommandBuffers();
+        initCameraBuffers();
         createSynchronisation();
     }
     catch (const std::runtime_error &e) {
@@ -70,7 +72,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     renderPassBeginInfo.framebuffer = swapchainFramebuffers.at(imageToBeDrawnIndex);
 
     const vk::ClearValue clearValues{
-            std::array<float, 4>{0.f, 0.f, .4f, 1.0f}
+            std::array<float, 4>{0.f, 0.f, .0f, .0f}
     };
 
     renderPassBeginInfo.pClearValues = &clearValues;
@@ -349,6 +351,24 @@ void Renderer::initCommandBuffers() {
             device.destroyCommandPool(frames[i].commandPool);
         });
 
+    }
+}
+
+void Renderer::initCameraBuffers() {
+    SD_RENDERER_DEBUG("Camera uniform buffer initialisation.");
+    // init buffers
+    // map buffers - they stay mapped because of persistent mapping
+    // add to deletion queue
+    std::vector<vk::MemoryPropertyFlagBits> flags;
+    flags.reserve(2);
+    flags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
+    flags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
+
+    for(int i = 0; i < MAX_FRAME_DRAWS; i++){
+        frames.at(i).cameraBuffer.init(queueFamilyIndices.graphicsFamily);
+        frames.at(i).cameraBuffer.allocate(getMemoryTypeIndex(flags));
+        frames.at(i).cameraBuffer.map(0, sizeof(CameraBuffer));
+        mainDeletionQueue.push_function([=]() {frames.at(i).cameraBuffer.destroy();});
     }
 }
 
@@ -693,7 +713,12 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 void Renderer::initVertexBuffer() {
 
     SD_RENDERER_DEBUG("Initialising vertex buffer.");
-    uint32_t memoryTypeIndex = getMemoryTypeIndex();
+    std::vector<vk::MemoryPropertyFlagBits> flags;
+    flags.reserve(2);
+    flags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
+    flags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
+
+    uint32_t memoryTypeIndex = getMemoryTypeIndex(flags);
     vertexBuffer.init(queueFamilyIndices.graphicsFamily);
     mainDeletionQueue.push_function([=]() {vertexBuffer.destroy();});
 
@@ -702,22 +727,28 @@ void Renderer::initVertexBuffer() {
 
 }
 
-uint32_t Renderer::getMemoryTypeIndex() {
+uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBits>& flags) {
 
     vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDevice.getMemoryProperties();
 
     uint32_t memoryTypeIndex = uint32_t(~0);
     // TODO make sure it's big enough for buffer requested size
 
-
-    // TODO add MemoryPropertyFlags as parameters. Use switch case to determine, based on passed buffer usage?
+    
     for (uint32_t currentMemoryTypeIndex = 0;
-         currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex) {
+         currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex)
+    {
         vk::MemoryType memoryType = memoryProperties.memoryTypes[currentMemoryTypeIndex];
-        if ((vk::MemoryPropertyFlagBits::eHostVisible & memoryType.propertyFlags) &&
-            (vk::MemoryPropertyFlagBits::eHostCoherent & memoryType.propertyFlags)) {
+        if(std::all_of(flags.begin(), flags.end(), [&memoryType](vk::MemoryPropertyFlagBits flag){return flag & memoryType.propertyFlags;}))
+        {
+            SD_RENDERER_DEBUG("Matching memory types");
             return currentMemoryTypeIndex;
         }
+        else{
+            SD_RENDERER_DEBUG("No matching memory types");
+        }
     }
+
     return memoryTypeIndex;
 }
+
