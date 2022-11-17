@@ -13,10 +13,15 @@ Scene::Scene(){
 Scene::~Scene() = default;
 
 void Scene::load() {
+    camBuffer.camPos = {0.f,0.f,-2.f};
+    camBuffer.view = glm::translate(glm::mat4(1.f), camBuffer.camPos);
+    camBuffer.proj = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
 
-    projection[1][1] *= -1;
+    camBuffer.proj[1][1] *= -1;
+    camBuffer.viewproj = camBuffer.proj* camBuffer.view;
+
     glm::mat4 model = glm::rotate(glm::mat4{ 1.0f }, glm::radians( 0.1f), glm::vec3(2, 1, 0));
-    glm::mat4 mesh_matrix = projection * view * model;
+
 
     ShaderInfo vertInfo{"../../assets/shaders/compiled/shader.vert.spv",
                         vk::ShaderStageFlagBits::eVertex, true};
@@ -30,7 +35,7 @@ void Scene::load() {
 
     materials.emplace_back(shadersInfo, "triangleMat");
     meshes.emplace_back();
-    renderables.emplace_back(meshes.back(), materials.back(), mesh_matrix);
+    renderables.emplace_back(meshes.back(), materials.back(), model);
     Renderer::Get().loadMeshes(&renderables);
 
 

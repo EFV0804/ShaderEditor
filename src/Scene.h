@@ -8,6 +8,8 @@
 #include "Renderer.h"
 #include "glm/gtx/transform.hpp"
 
+
+
 class Scene {
 public:
     Scene();
@@ -21,11 +23,11 @@ public:
     void cleanUp();
     DeletionQueue sceneDeletionQueue;
 
+    CameraBuffer camBuffer;
+
 private:
     std::vector<Material> materials;
     std::vector<Mesh> meshes;
-    glm::vec3 camPos{0.f,0.f,-2.f};
-    glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-    glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+
 
 };
