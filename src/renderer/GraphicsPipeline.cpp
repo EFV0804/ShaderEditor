@@ -98,8 +98,8 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
     vk::PipelineLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
     layoutInfo.pNext = nullptr;
-    layoutInfo.setLayoutCount = 0;
-    layoutInfo.pSetLayouts = nullptr;
+    layoutInfo.setLayoutCount = 1;
+    layoutInfo.pSetLayouts = &Renderer::Get().getCameraDescriptorLayout();
     layoutInfo.pushConstantRangeCount = pushConstants.size();
     layoutInfo.pPushConstantRanges = pushConstants.data();
 
@@ -133,6 +133,7 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
 }
 
 void GraphicsPipeline::cleanUp() const {
+    Renderer::Get().device.destroyDescriptorSetLayout(descriptorSetLayout);
     Renderer::Get().device.destroyPipelineLayout(pipelineLayout);
     Renderer::Get().device.destroyPipeline(graphicsPipeline);
 }
