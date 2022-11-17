@@ -23,6 +23,7 @@ int Renderer::init() {
         initFramebuffers();
         initVertexBuffer();
         initCommandBuffers();
+        initCameraDescriptors();
         initCameraBuffers();
         createSynchronisation();
     }
@@ -133,6 +134,13 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
         if(current_mat != lastMaterial){
 //            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
             getCurrentFrame()->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, current_mat->pipeline.getPipeline());
+            getCurrentFrame()->commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                                                current_mat->pipeline.getLayout(),
+                                                                0,
+                                                                1,
+                                                                &getCurrentFrame()->cameraDescriptorSet,
+                                                                0,
+                                                                nullptr);
             lastMaterial = current_mat;
         }
         VkDeviceSize offset = 0;
@@ -367,9 +375,89 @@ void Renderer::initCameraBuffers() {
     for(int i = 0; i < MAX_FRAME_DRAWS; i++){
         frames.at(i).cameraBuffer.init(queueFamilyIndices.graphicsFamily);
         frames.at(i).cameraBuffer.allocate(getMemoryTypeIndex(flags));
+        frames.at(i).cameraBuffer.bind();
         frames.at(i).cameraBuffer.map(0, sizeof(CameraBuffer));
-        mainDeletionQueue.push_function([=]() {frames.at(i).cameraBuffer.destroy();});
+
+
+        mainDeletionQueue.push_function([=]() {
+            frames.at(i).cameraBuffer.unMap();
+            frames.at(i).cameraBuffer.destroy();
+        });
+
+        // Allocate Camera Descriptor
+        vk::DescriptorSetAllocateInfo allocInfo ={};
+        allocInfo.pNext = nullptr;
+        allocInfo.sType = vk::StructureType::eDescriptorSetAllocateInfo;
+        allocInfo.descriptorPool = descriptorPool;
+        allocInfo.descriptorSetCount = 1;
+        //using the global data layout
+        allocInfo.pSetLayouts = &cameraDescriptorLayout;
+
+        auto result = device.allocateDescriptorSets(&allocInfo, &frames.at(i).cameraDescriptorSet);
+
+        // Point Descriptor to camera buffer
+        vk::DescriptorBufferInfo binfo;
+        binfo.buffer = frames.at(i).cameraBuffer.getBuffer();
+        binfo.offset = 0;
+        binfo.range = sizeof(CameraBuffer);
+
+        vk::WriteDescriptorSet setWrite = {};
+        setWrite.sType = vk::StructureType::eWriteDescriptorSet;
+        setWrite.pNext = nullptr;
+        setWrite.dstBinding = 0;
+        setWrite.dstSet = frames.at(i).cameraDescriptorSet;
+        setWrite.descriptorCount = 1;
+        setWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
+        setWrite.pBufferInfo = &binfo;
+
+        device.updateDescriptorSets(1, &setWrite, 0, nullptr);
+
     }
+}
+
+void Renderer::updateCameraBuffer(const CameraBuffer& camData){
+    //Copy param scene cam data into frame camerabuffer
+
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, frames.at(currentFrame).cameraBuffer.getState() == BufferState::Mapped, "Buffer is not mapped and cannot be copied into")
+    frames.at(currentFrame).cameraBuffer.copy(&camData, sizeof(camData));
+}
+
+void Renderer::initCameraDescriptors(){
+    // Descriptor set
+    cameraDescriptorBinding.binding = 0;
+    cameraDescriptorBinding.descriptorCount = 1;
+    cameraDescriptorBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
+    cameraDescriptorBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+
+    vk::DescriptorSetLayoutCreateInfo descriptorInfo = {};
+    descriptorInfo.sType = vk::StructureType::eDescriptorSetLayoutCreateInfo;
+    descriptorInfo.pBindings = &cameraDescriptorBinding;
+    descriptorInfo.pNext = nullptr;
+    descriptorInfo.bindingCount = 1;
+//    descriptorInfo.flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool;
+
+    cameraDescriptorLayout = device.createDescriptorSetLayout(descriptorInfo);
+
+    std::vector<vk::DescriptorPoolSize> sizes =
+            {
+                    { vk::DescriptorType::eUniformBuffer, 10 }
+            };
+
+    vk::DescriptorPoolCreateInfo descriptorPoolInfo = {};
+    descriptorPoolInfo.sType = vk::StructureType::eDescriptorPoolCreateInfo;
+    descriptorPoolInfo.maxSets = 10;
+    descriptorPoolInfo.poolSizeCount = (uint32_t)sizes.size();
+    descriptorPoolInfo.pPoolSizes = sizes.data();
+//    descriptorPoolInfo.flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
+
+    descriptorPool = device.createDescriptorPool(descriptorPoolInfo);
+
+
+    mainDeletionQueue.push_function([=]() {
+        device.destroyDescriptorPool(descriptorPool);
+        device.destroyDescriptorSetLayout(cameraDescriptorLayout);
+
+    });
 }
 
 void Renderer::initRenderPass() {

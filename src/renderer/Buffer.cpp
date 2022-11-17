@@ -46,6 +46,7 @@ void Buffer::allocate(uint32_t memoryTypeIndex) {
     memoryAllocateInfo.memoryTypeIndex = memoryTypeIndex;
     memoryAllocateInfo.pNext = nullptr;
 
+
     bufferMemory = Renderer::Get().device.allocateMemory(memoryAllocateInfo);
     state = BufferState::Allocated;
 }
@@ -55,6 +56,7 @@ void Buffer::bind(int memoryOffset) {
 }
 
 void Buffer::copy(const void *src, uint64_t dataSize) {
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state = BufferState::Mapped, "Buffer memory is not mapped")
     memcpy(bufferStart, src, dataSize);
 }
 

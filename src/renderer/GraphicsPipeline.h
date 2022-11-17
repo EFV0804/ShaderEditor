@@ -27,10 +27,11 @@ public:
 private:
     /*
      * Pipeline Layout, allows to specify uniforms, push constants in shader code.
-     * Right now this is a 'blank' pipeline layout until implemention of push constants etc.
      * //TODO Create vk::PipelineLayout based uniforms present in shader code. Using SPIRV-Cross
      */
 	vk::PipelineLayout pipelineLayout;
+    vk::DescriptorSetLayout descriptorSetLayout;
+    vk::DescriptorSet descriptorSet;
     /*
      * The pipeline :)
      */

@@ -47,7 +47,6 @@ struct DeletionQueue {
     }
 };
 struct CameraBuffer{
-    glm::vec3 camPos;
     glm::mat4 view;
     glm::mat4 proj;
     glm::mat4 viewproj;
@@ -116,6 +115,7 @@ public:
      * \param [in] a pointer to a vector of renderable objects.
      */
     void loadMeshes(std::vector<Renderable> *renderables);
+    void updateCameraBuffer(const CameraBuffer& camData);
     /*!
      * \brief Getter for the swapchain extent
      * \return vk::Extent2D object
@@ -125,6 +125,7 @@ public:
  * \brief Returns the render pass
  */
     const vk::RenderPass& getRenderPass() const { return renderPass; }
+    const vk::DescriptorSetLayout& getCameraDescriptorLayout() const {return cameraDescriptorLayout;}
     /**
  * Deletion queue used to ensure destruction of Vulkan entities. Uses FIFO logic.
  */
@@ -232,6 +233,7 @@ private:
         vk::CommandPool commandPool;      /**< A pool associated with specific queue family, from which command buffers are allocated. */
         vk::CommandBuffer commandBuffer;  /**< Buffer where commands are recorded before being submitted to the queue.*/
         Buffer cameraBuffer{vk::BufferUsageFlagBits::eUniformBuffer, 50000, vk::SharingMode::eExclusive}; /**< Uniform buffer containing proj view matrices and camera position */
+        vk::DescriptorSet cameraDescriptorSet;
     };
     /*
      * Vector a frame data describing all the frames in the process of being rendered/presented.
@@ -245,6 +247,10 @@ private:
      * a Buffer object destined to store vertices to be rendered.
      */
     Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer, 50000, vk::SharingMode::eExclusive};
+
+    vk::DescriptorSetLayoutBinding cameraDescriptorBinding;
+    vk::DescriptorSetLayout cameraDescriptorLayout;
+    vk::DescriptorPool descriptorPool;
     /*!
      * \brief Creates a GLFW window.
      */
@@ -271,6 +277,8 @@ private:
     void initCommandBuffers();
 
     void initCameraBuffers();
+
+    void initCameraDescriptors();
     /*!
      * \brief initialises semaphores and fence for each frame.
      */

@@ -41,6 +41,7 @@ int main() {
 
     while (!glfwWindowShouldClose(renderer.window)) {
         glfwPollEvents();
+//        sceneExample.update();
         sceneExample.draw();
     }
 

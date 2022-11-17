@@ -82,6 +82,7 @@ public:
      * \brief util getter for vk::Buffer member
      * \return member buffer
      */
+     const BufferState& getState() const {return state;}
      const vk::Buffer& getBuffer() const {return buffer;}
      /*!
       * \brief utility getter for buffer memory.
