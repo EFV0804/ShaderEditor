@@ -247,6 +247,7 @@ private:
      * a Buffer object destined to store vertices to be rendered.
      */
     Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst, 50000, vk::SharingMode::eExclusive};
+    Buffer indexBuffer{vk::BufferUsageFlagBits::eVertexBuffer, 50000, vk::SharingMode::eExclusive};
     Buffer stagingBuffer{vk::BufferUsageFlagBits::eTransferSrc, 50000, vk::SharingMode::eExclusive};
     vk::DescriptorSetLayoutBinding cameraDescriptorBinding;
     vk::DescriptorSetLayout cameraDescriptorLayout;
@@ -295,6 +296,8 @@ private:
      * \brief initialises vertex buffer.
      */
     void initVertexBuffer();
+    void initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size,
+                         std::vector<uint16_t> indices);
     /*!
      * \brief initialises physical device.
      */

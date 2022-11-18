@@ -14,4 +14,4 @@ target_include_directories(renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Vulkan REQUIRED)
 message(STATUS ${Vulkan_LIBRARY})
 
-target_link_libraries(renderer core glm glfw Vulkan::Vulkan)
+target_link_libraries(renderer core glm assimp glfw Vulkan::Vulkan)

@@ -4,8 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include "../Renderable.h"
-#include <algorithm>
-#include <numeric>
+
 
 int Renderer::init() {
 
@@ -157,7 +156,9 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
         }
 
         getCurrentFrame()->commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
-        getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
+        getCurrentFrame()->commandBuffer.bindIndexBuffer(indexBuffer.getBuffer(), 0, vk::IndexType::eUint16);
+//        getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
+        getCurrentFrame()->commandBuffer.drawIndexed(static_cast<uint32_t>(renderables->at(i).getMesh()->indices.size()), 1, 0,0,0);
 
     }
 }
@@ -792,11 +793,23 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised.")
 //    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
 
+    vk::DeviceSize indexDeviceSize = 0;
+    std::vector<uint16_t> indices;
+
     for(int i = 0; i < renderables->size(); i++){
+        indexDeviceSize += sizeof(renderables->at(i).getMesh()->indices.at(0) * renderables->at(i).getMesh()->indices.size());
+        for(auto& index :renderables->at(i).getMesh()->indices ){
+            indices.push_back(index);
+        }
+
         stagingBuffer.map(0, renderables->at(i).getMesh()->getSize());
         stagingBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
         stagingBuffer.unMap();
     }
+    std::vector<vk::MemoryPropertyFlagBits> flags;
+    flags.push_back(vk::MemoryPropertyFlagBits::eHostCoherent);
+    flags.push_back(vk::MemoryPropertyFlagBits::eHostVisible);
+    initIndexBuffer(flags, indexDeviceSize, indices);
 
     vk::CommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
@@ -809,6 +822,9 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     vk::CommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
     beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+    // COPY VERTICES TO VEXTER BUFFER
+
 
     singleUseCmd.begin(beginInfo);
 
@@ -824,18 +840,40 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 
     singleUseCmd.end();
 
-    vk::SubmitInfo submitInfo = {};
-    submitInfo.sType = vk::StructureType::eSubmitInfo;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &singleUseCmd;
+    vk::SubmitInfo vertexSubmitInfo = {};
+    vertexSubmitInfo.sType = vk::StructureType::eSubmitInfo;
+    vertexSubmitInfo.commandBufferCount = 1;
+    vertexSubmitInfo.pCommandBuffers = &singleUseCmd;
 
-    graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+    graphicsQueue.submit(1, &vertexSubmitInfo, VK_NULL_HANDLE);
     graphicsQueue.waitIdle();
+
+    // COPY INDICES TO INDEX BUFFER
+    for(int i = 0; i < renderables->size(); i++){
+        stagingBuffer.map(0, renderables->at(i).getMesh()->getSize());
+        stagingBuffer.copy(renderables->at(i).getMesh()->indices.data(), indexDeviceSize);
+        stagingBuffer.unMap();
+    }
+
+    singleUseCmd.begin(beginInfo);
+
+    singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
+                            indexBuffer.getBuffer(),
+                            1,
+                            &copyRegion);
+
+    singleUseCmd.end();
+
+    vk::SubmitInfo indexSubmitInfo = {};
+    indexSubmitInfo.sType = vk::StructureType::eSubmitInfo;
+    indexSubmitInfo.commandBufferCount = 1;
+    indexSubmitInfo.pCommandBuffers = &singleUseCmd;
+
+    graphicsQueue.submit(1, &indexSubmitInfo, VK_NULL_HANDLE);
+
     device.freeCommandBuffers(getCurrentFrame()->commandPool,
                               1,
                               &singleUseCmd);
-
-
 }
 
 void Renderer::initVertexBuffer() {
@@ -865,6 +903,18 @@ void Renderer::initVertexBuffer() {
     vertexBuffer.bind();
 
 }
+void Renderer::initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size,
+                               std::vector<uint16_t> indices) {
+
+    indexBuffer.setSize(size);
+    std::vector<vk::MemoryPropertyFlagBits> indexFlags;
+    uint32_t indexMemoryTypeIndex = getMemoryTypeIndex(indexFlags);
+    indexBuffer.init(queueFamilyIndices.graphicsFamily);
+    indexBuffer.allocate(indexMemoryTypeIndex);
+    indexBuffer.bind();
+    mainDeletionQueue.push_function([=]() {indexBuffer.destroy();});
+
+}
 
 uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBits>& flags) {
 
@@ -873,7 +923,8 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
     uint32_t memoryTypeIndex = uint32_t(~0);
     // TODO make sure it's big enough for buffer requested size
 
-    
+
+    // TODO add MemoryPropertyFlags as parameters. Use switch case to determine, based on passed buffer usage?
     for (uint32_t currentMemoryTypeIndex = 0;
          currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex)
     {
@@ -890,4 +941,3 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
 
     return memoryTypeIndex;
 }
-

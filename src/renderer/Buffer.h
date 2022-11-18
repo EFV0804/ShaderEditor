@@ -32,7 +32,7 @@ public:
     Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize, vk::SharingMode sharingMode);
     Buffer() = delete;
 //    Buffer(const Buffer&) = delete;
-    Buffer &operator=(const Buffer&) = delete;
+//    Buffer &operator=(const Buffer&) = delete;
     ~Buffer() = default;
 
     /*!
@@ -85,6 +85,7 @@ public:
      const BufferState& getState() const {return state;}
      const vk::Buffer& getBuffer() const {return buffer;}
      const uint64_t& getSize() const {return size;}
+     void setSize(const uint16_t& pSize) {size = pSize;}
      /*!
       * \brief utility getter for buffer memory.
       * @return member vk::DeviceMemory bufferMemory
