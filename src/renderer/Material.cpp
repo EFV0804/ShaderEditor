@@ -5,10 +5,11 @@
 #include "Material.h"
 #include "Renderer.h"
 #include <utility>
+#include "glm/glm.hpp"
 
 Material::Material(std::vector<ShaderInfo> shadersInfo, std::string pName) :
 shaders{loadShaders(shadersInfo)},
-pipeline{loadPipeline()},
+pipeline{loadPipeline(shadersInfo)},
 name{pName}{
 
 }
@@ -24,7 +25,7 @@ std::vector<Shader> Material::loadShaders(std::vector<ShaderInfo> info){
     return shaders;
 }
 
-GraphicsPipeline Material::loadPipeline() {
+GraphicsPipeline Material::loadPipeline(std::vector<ShaderInfo> shadersInfo) {
     std::vector<vk::PipelineShaderStageCreateInfo> stages;
     stages.reserve(shaders.size());
 
@@ -38,8 +39,18 @@ GraphicsPipeline Material::loadPipeline() {
 
         stages.emplace_back(shaderStageInfo);
     }
+    for(auto info : shadersInfo){
+        if(info.hasPushConstant == true){
+            vk::PushConstantRange pushConstant;
+            pushConstant.offset = 0;
+            pushConstant.size = sizeof(glm::mat4);
+            pushConstant.stageFlags = info.stage;
+            pushConstants.push_back(pushConstant);
+        }
+    }
+    SD_RENDERER_DEBUG(pushConstants.size());
     //Copy elision, not call to copy constructor is made.
-    return GraphicsPipeline{ stages};
+    return GraphicsPipeline{ stages, pushConstants};
 }
 
 void Material::cleanUp() const {

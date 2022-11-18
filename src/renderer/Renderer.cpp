@@ -4,7 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include "../Renderable.h"
-
+#include <algorithm>
+#include <numeric>
 
 int Renderer::init() {
 
@@ -22,6 +23,8 @@ int Renderer::init() {
         initFramebuffers();
         initVertexBuffer();
         initCommandBuffers();
+        initCameraDescriptors();
+        initCameraBuffers();
         createSynchronisation();
     }
     catch (const std::runtime_error &e) {
@@ -70,7 +73,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     renderPassBeginInfo.framebuffer = swapchainFramebuffers.at(imageToBeDrawnIndex);
 
     const vk::ClearValue clearValues{
-            std::array<float, 4>{0.f, 0.f, .4f, 1.0f}
+            std::array<float, 4>{0.f, 0.f, .0f, .0f}
     };
 
     renderPassBeginInfo.pClearValues = &clearValues;
@@ -131,9 +134,28 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
         if(current_mat != lastMaterial){
 //            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
             getCurrentFrame()->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, current_mat->pipeline.getPipeline());
+            //TODO add semaphores to make sure camera buffer is not in use before copying or are frame semaphores enough?
+            getCurrentFrame()->commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                                                current_mat->pipeline.getLayout(),
+                                                                0,
+                                                                1,
+                                                                &getCurrentFrame()->cameraDescriptorSet,
+                                                                0,
+                                                                nullptr);
             lastMaterial = current_mat;
         }
         VkDeviceSize offset = 0;
+
+        //Push constants
+        for(auto constant : renderables->at(i).getMaterial()->getPushConstants()){
+            getCurrentFrame()->commandBuffer.pushConstants(
+                    renderables->at(i).getMaterial()->pipeline.getLayout(),
+                    constant.stageFlags,
+                    constant.offset,
+                    constant.size,
+                    &renderables->at(i).transform);
+        }
+
         getCurrentFrame()->commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
         getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
 
@@ -339,6 +361,104 @@ void Renderer::initCommandBuffers() {
         });
 
     }
+}
+
+void Renderer::initCameraBuffers() {
+    SD_RENDERER_DEBUG("Camera uniform buffer initialisation.");
+    // init buffers
+    // map buffers - they stay mapped because of persistent mapping
+    // add to deletion queue
+    std::vector<vk::MemoryPropertyFlagBits> flags;
+    flags.reserve(2);
+    flags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
+    flags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
+
+    for(int i = 0; i < MAX_FRAME_DRAWS; i++){
+        frames.at(i).cameraBuffer.init(queueFamilyIndices.graphicsFamily);
+        frames.at(i).cameraBuffer.allocate(getMemoryTypeIndex(flags));
+        frames.at(i).cameraBuffer.bind();
+        frames.at(i).cameraBuffer.map(0, sizeof(CameraBuffer));
+
+
+        mainDeletionQueue.push_function([=]() {
+            frames.at(i).cameraBuffer.unMap();
+            frames.at(i).cameraBuffer.destroy();
+        });
+
+        // Allocate Camera Descriptor
+        vk::DescriptorSetAllocateInfo allocInfo ={};
+        allocInfo.pNext = nullptr;
+        allocInfo.sType = vk::StructureType::eDescriptorSetAllocateInfo;
+        allocInfo.descriptorPool = descriptorPool;
+        allocInfo.descriptorSetCount = 1;
+        //using the global data layout
+        allocInfo.pSetLayouts = &cameraDescriptorLayout;
+
+        auto result = device.allocateDescriptorSets(&allocInfo, &frames.at(i).cameraDescriptorSet);
+
+        // Point Descriptor to camera buffer
+        vk::DescriptorBufferInfo binfo;
+        binfo.buffer = frames.at(i).cameraBuffer.getBuffer();
+        binfo.offset = 0;
+        binfo.range = sizeof(CameraBuffer);
+
+        vk::WriteDescriptorSet setWrite = {};
+        setWrite.sType = vk::StructureType::eWriteDescriptorSet;
+        setWrite.pNext = nullptr;
+        setWrite.dstBinding = 0;
+        setWrite.dstSet = frames.at(i).cameraDescriptorSet;
+        setWrite.descriptorCount = 1;
+        setWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
+        setWrite.pBufferInfo = &binfo;
+
+        device.updateDescriptorSets(1, &setWrite, 0, nullptr);
+
+    }
+}
+
+void Renderer::updateCameraBuffer(const CameraBuffer& camData){
+    //Copy param scene cam data into frame camerabuffer
+    //TODO add semaphores to make sure camera buffer is not in use before copying
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, frames.at(currentFrame).cameraBuffer.getState() == BufferState::Mapped, "Buffer is not mapped and cannot be copied into")
+    frames.at(currentFrame).cameraBuffer.copy(&camData, sizeof(camData));
+}
+
+void Renderer::initCameraDescriptors(){
+    // Descriptor set
+    cameraDescriptorBinding.binding = 0;
+    cameraDescriptorBinding.descriptorCount = 1;
+    cameraDescriptorBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
+    cameraDescriptorBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+
+    vk::DescriptorSetLayoutCreateInfo descriptorInfo = {};
+    descriptorInfo.sType = vk::StructureType::eDescriptorSetLayoutCreateInfo;
+    descriptorInfo.pBindings = &cameraDescriptorBinding;
+    descriptorInfo.pNext = nullptr;
+    descriptorInfo.bindingCount = 1;
+//    descriptorInfo.flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool;
+
+    cameraDescriptorLayout = device.createDescriptorSetLayout(descriptorInfo);
+
+    std::vector<vk::DescriptorPoolSize> sizes =
+            {
+                    { vk::DescriptorType::eUniformBuffer, 10 }
+            };
+
+    vk::DescriptorPoolCreateInfo descriptorPoolInfo = {};
+    descriptorPoolInfo.sType = vk::StructureType::eDescriptorPoolCreateInfo;
+    descriptorPoolInfo.maxSets = 10;
+    descriptorPoolInfo.poolSizeCount = (uint32_t)sizes.size();
+    descriptorPoolInfo.pPoolSizes = sizes.data();
+//    descriptorPoolInfo.flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
+
+    descriptorPool = device.createDescriptorPool(descriptorPoolInfo);
+
+
+    mainDeletionQueue.push_function([=]() {
+        device.destroyDescriptorPool(descriptorPool);
+        device.destroyDescriptorSetLayout(cameraDescriptorLayout);
+
+    });
 }
 
 void Renderer::initRenderPass() {
@@ -673,40 +793,101 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 //    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
 
     for(int i = 0; i < renderables->size(); i++){
-        vertexBuffer.map(0, renderables->at(i).getMesh()->getSize());
-        vertexBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
-        vertexBuffer.unMap();
+        stagingBuffer.map(0, renderables->at(i).getMesh()->getSize());
+        stagingBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
+        stagingBuffer.unMap();
     }
+
+    vk::CommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
+    allocInfo.level = vk::CommandBufferLevel::ePrimary;
+    allocInfo.commandPool = getCurrentFrame()->commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    vk::CommandBuffer singleUseCmd;
+    device.allocateCommandBuffers(&allocInfo, &singleUseCmd);
+    vk::CommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
+    beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+    singleUseCmd.begin(beginInfo);
+
+    vk::BufferCopy copyRegion  = {};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = stagingBuffer.getSize();
+
+    singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
+                            vertexBuffer.getBuffer(),
+                            1,
+                            &copyRegion);
+
+    singleUseCmd.end();
+
+    vk::SubmitInfo submitInfo = {};
+    submitInfo.sType = vk::StructureType::eSubmitInfo;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &singleUseCmd;
+
+    graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+    graphicsQueue.waitIdle();
+    device.freeCommandBuffers(getCurrentFrame()->commandPool,
+                              1,
+                              &singleUseCmd);
+
+
 }
 
 void Renderer::initVertexBuffer() {
 
+    SD_RENDERER_DEBUG("Initialising staging buffer.");
+    std::vector<vk::MemoryPropertyFlagBits> stagingFlags;
+    stagingFlags.reserve(2);
+    stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
+    stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
+
+    int32_t stagingMemoryTypeIndex = getMemoryTypeIndex(stagingFlags);
+    stagingBuffer.init(stagingMemoryTypeIndex);
+    mainDeletionQueue.push_function([=]() {stagingBuffer.destroy();});
+    stagingBuffer.allocate(stagingMemoryTypeIndex);
+    stagingBuffer.bind();
+
     SD_RENDERER_DEBUG("Initialising vertex buffer.");
-    uint32_t memoryTypeIndex = getMemoryTypeIndex();
+    std::vector<vk::MemoryPropertyFlagBits> vertexFlags;
+    vertexFlags.reserve(1);
+    vertexFlags.emplace_back(vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+    uint32_t vertexMemoryTypeIndex = getMemoryTypeIndex(vertexFlags);
     vertexBuffer.init(queueFamilyIndices.graphicsFamily);
     mainDeletionQueue.push_function([=]() {vertexBuffer.destroy();});
 
-    vertexBuffer.allocate(memoryTypeIndex);
+    vertexBuffer.allocate(vertexMemoryTypeIndex);
     vertexBuffer.bind();
 
 }
 
-uint32_t Renderer::getMemoryTypeIndex() {
+uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBits>& flags) {
 
     vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDevice.getMemoryProperties();
 
     uint32_t memoryTypeIndex = uint32_t(~0);
     // TODO make sure it's big enough for buffer requested size
 
-
-    // TODO add MemoryPropertyFlags as parameters. Use switch case to determine, based on passed buffer usage?
+    
     for (uint32_t currentMemoryTypeIndex = 0;
-         currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex) {
+         currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex)
+    {
         vk::MemoryType memoryType = memoryProperties.memoryTypes[currentMemoryTypeIndex];
-        if ((vk::MemoryPropertyFlagBits::eHostVisible & memoryType.propertyFlags) &&
-            (vk::MemoryPropertyFlagBits::eHostCoherent & memoryType.propertyFlags)) {
+        if(std::all_of(flags.begin(), flags.end(), [&memoryType](vk::MemoryPropertyFlagBits flag){return flag & memoryType.propertyFlags;}))
+        {
+            SD_RENDERER_DEBUG("Matching memory types");
             return currentMemoryTypeIndex;
         }
+        else{
+            SD_RENDERER_DEBUG("No matching memory types");
+        }
     }
+
     return memoryTypeIndex;
 }
+

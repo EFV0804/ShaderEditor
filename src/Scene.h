@@ -6,6 +6,8 @@
 #include <vector>
 #include "Renderable.h"
 #include "Renderer.h"
+#include "glm/gtx/transform.hpp"
+
 
 
 class Scene {
@@ -17,12 +19,16 @@ public:
 
     std::vector<Renderable> renderables;
     void load();
+    void update();
     void draw();
     void cleanUp();
     DeletionQueue sceneDeletionQueue;
 
+    CameraBuffer camBuffer;
+
 private:
     std::vector<Material> materials;
     std::vector<Mesh> meshes;
+
 
 };

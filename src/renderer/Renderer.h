@@ -2,6 +2,7 @@
 #define GLFW_INCLUDE_VULKAN
 
 #include <GLFW/glfw3.h>
+#include "glm/glm.hpp"
 #include <vulkan/vulkan.hpp>
 #include <stdexcept>
 #include <vector>
@@ -45,7 +46,11 @@ struct DeletionQueue {
         deletors.clear();
     }
 };
-
+struct CameraBuffer{
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 viewproj;
+};
 /**
  * \brief Renderer class used to initialise Vulkan and do draw calls
  */
@@ -110,6 +115,7 @@ public:
      * \param [in] a pointer to a vector of renderable objects.
      */
     void loadMeshes(std::vector<Renderable> *renderables);
+    void updateCameraBuffer(const CameraBuffer& camData);
     /*!
      * \brief Getter for the swapchain extent
      * \return vk::Extent2D object
@@ -119,19 +125,20 @@ public:
  * \brief Returns the render pass
  */
     const vk::RenderPass& getRenderPass() const { return renderPass; }
+    const vk::DescriptorSetLayout& getCameraDescriptorLayout() const {return cameraDescriptorLayout;}
     /**
  * Deletion queue used to ensure destruction of Vulkan entities. Uses FIFO logic.
  */
     DeletionQueue mainDeletionQueue;
+    /**
+* indicates the number corresponding to the current frame. Equivalent to currentFrame % MAX_FRAME_DRAWS.
+*/
+    int currentFrame = 0;
 private:
     /**
     * Vulkan instance
     */
     vk::Instance instance;
-    /**
-    * indicates the number corresponding to the current frame. Equivalent to currentFrame % MAX_FRAME_DRAWS.
-    */
-    int currentFrame = 0;
     /*
      * Describes how the rendering process should go. Manages the relationship between attachments and subpasses.
      */
@@ -225,6 +232,8 @@ private:
         vk::Fence renderFence;            /**< Signals when frame has been submitted to graphics queue. */
         vk::CommandPool commandPool;      /**< A pool associated with specific queue family, from which command buffers are allocated. */
         vk::CommandBuffer commandBuffer;  /**< Buffer where commands are recorded before being submitted to the queue.*/
+        Buffer cameraBuffer{vk::BufferUsageFlagBits::eUniformBuffer, 50000, vk::SharingMode::eExclusive}; /**< Uniform buffer containing proj view matrices and camera position */
+        vk::DescriptorSet cameraDescriptorSet;
     };
     /*
      * Vector a frame data describing all the frames in the process of being rendered/presented.
@@ -237,7 +246,11 @@ private:
     /*
      * a Buffer object destined to store vertices to be rendered.
      */
-    Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer, 50000};
+    Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst, 50000, vk::SharingMode::eExclusive};
+    Buffer stagingBuffer{vk::BufferUsageFlagBits::eTransferSrc, 50000, vk::SharingMode::eExclusive};
+    vk::DescriptorSetLayoutBinding cameraDescriptorBinding;
+    vk::DescriptorSetLayout cameraDescriptorLayout;
+    vk::DescriptorPool descriptorPool;
     /*!
      * \brief Creates a GLFW window.
      */
@@ -262,6 +275,10 @@ private:
      * \brief initialises command pools and buffers.
      */
     void initCommandBuffers();
+
+    void initCameraBuffers();
+
+    void initCameraDescriptors();
     /*!
      * \brief initialises semaphores and fence for each frame.
      */
@@ -363,7 +380,7 @@ private:
  *
  * \return the index of the requested memory type
  */
-    uint32_t getMemoryTypeIndex();
+    uint32_t getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBits>& flags);
     /*!
  * \brief  Returns the current frame for easy access
  *

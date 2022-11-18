@@ -6,9 +6,10 @@
 #include "Renderer.h"
 #include <iostream>
 
-Buffer::Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize) :
-        usage(pUsage),
-        size(pSize) {
+Buffer::Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize, vk::SharingMode pSharingMode) :
+        usage{pUsage},
+        size{pSize},
+        sharingMode{pSharingMode}{
 
 }
 
@@ -45,6 +46,7 @@ void Buffer::allocate(uint32_t memoryTypeIndex) {
     memoryAllocateInfo.memoryTypeIndex = memoryTypeIndex;
     memoryAllocateInfo.pNext = nullptr;
 
+
     bufferMemory = Renderer::Get().device.allocateMemory(memoryAllocateInfo);
     state = BufferState::Allocated;
 }
@@ -54,6 +56,7 @@ void Buffer::bind(int memoryOffset) {
 }
 
 void Buffer::copy(const void *src, uint64_t dataSize) {
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state = BufferState::Mapped, "Buffer memory is not mapped")
     memcpy(bufferStart, src, dataSize);
 }
 
@@ -70,7 +73,7 @@ vk::BufferCreateInfo Buffer::getBufferCreateInfo(const uint32_t queueFamilyIndic
     bufferInfo.usage = usage;
     bufferInfo.pQueueFamilyIndices = &queueFamilyIndices;
     bufferInfo.queueFamilyIndexCount = 1;
-    bufferInfo.sharingMode = vk::SharingMode::eExclusive;
+    bufferInfo.sharingMode = sharingMode;
     bufferInfo.pNext = nullptr;
 
     return bufferInfo;

@@ -2,15 +2,16 @@
 #include "Renderer.h"
 #include "Mesh.h"
 
-GraphicsPipeline::GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages) :
+GraphicsPipeline::GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages, std::vector<vk::PushConstantRange>& pushConstants) :
 pipelineLayout(),
 graphicsPipeline()
 {
-    createGraphicsPipeline(stages);
+    createGraphicsPipeline(stages, pushConstants);
 }
 
 
-void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo>& stages)
+void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages,
+                                              std::vector<vk::PushConstantRange> pushConstants)
 {
 
     // Get Vertex State Input Info
@@ -21,7 +22,6 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(descriptions.attributesDescriptions.size());
     vertexInputInfo.pVertexBindingDescriptions = descriptions.bindingsDescriptions.data();
     vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(descriptions.bindingsDescriptions.size());
-
 
     // Get Input Assembly State Info
     vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
@@ -98,10 +98,10 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
     vk::PipelineLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
     layoutInfo.pNext = nullptr;
-    layoutInfo.setLayoutCount = 0;
-    layoutInfo.pSetLayouts = nullptr;
-    layoutInfo.pushConstantRangeCount = 0;
-    layoutInfo.pPushConstantRanges = nullptr;
+    layoutInfo.setLayoutCount = 1;
+    layoutInfo.pSetLayouts = &Renderer::Get().getCameraDescriptorLayout();
+    layoutInfo.pushConstantRangeCount = pushConstants.size();
+    layoutInfo.pPushConstantRanges = pushConstants.data();
 
     pipelineLayout = Renderer::Get().device.createPipelineLayout(layoutInfo);
 
@@ -133,6 +133,7 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
 }
 
 void GraphicsPipeline::cleanUp() const {
+    Renderer::Get().device.destroyDescriptorSetLayout(descriptorSetLayout);
     Renderer::Get().device.destroyPipelineLayout(pipelineLayout);
     Renderer::Get().device.destroyPipeline(graphicsPipeline);
 }
