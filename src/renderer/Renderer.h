@@ -247,7 +247,7 @@ private:
      * a Buffer object destined to store vertices to be rendered.
      */
     Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer, 50000, vk::SharingMode::eExclusive};
-
+    Buffer stagingBuffer{vk::BufferUsageFlagBits::eVertexBuffer, 50000, vk::SharingMode::eExclusive};
     vk::DescriptorSetLayoutBinding cameraDescriptorBinding;
     vk::DescriptorSetLayout cameraDescriptorLayout;
     vk::DescriptorPool descriptorPool;

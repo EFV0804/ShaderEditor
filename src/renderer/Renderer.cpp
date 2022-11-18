@@ -134,6 +134,7 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
         if(current_mat != lastMaterial){
 //            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
             getCurrentFrame()->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, current_mat->pipeline.getPipeline());
+            //TODO add semaphores to make sure camera buffer is not in use before copying or are frame semaphores enough?
             getCurrentFrame()->commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                                                                 current_mat->pipeline.getLayout(),
                                                                 0,
@@ -417,7 +418,7 @@ void Renderer::initCameraBuffers() {
 
 void Renderer::updateCameraBuffer(const CameraBuffer& camData){
     //Copy param scene cam data into frame camerabuffer
-
+    //TODO add semaphores to make sure camera buffer is not in use before copying
     SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, frames.at(currentFrame).cameraBuffer.getState() == BufferState::Mapped, "Buffer is not mapped and cannot be copied into")
     frames.at(currentFrame).cameraBuffer.copy(&camData, sizeof(camData));
 }
@@ -792,25 +793,75 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 //    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
 
     for(int i = 0; i < renderables->size(); i++){
-        vertexBuffer.map(0, renderables->at(i).getMesh()->getSize());
-        vertexBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
-        vertexBuffer.unMap();
+        stagingBuffer.map(0, renderables->at(i).getMesh()->getSize());
+        stagingBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
+        stagingBuffer.unMap();
     }
+
+    vk::CommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
+    allocInfo.level = vk::CommandBufferLevel::ePrimary;
+    allocInfo.commandPool = getCurrentFrame()->commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    vk::CommandBuffer singleUseCmd;
+    device.allocateCommandBuffers(&allocInfo, &singleUseCmd);
+    vk::CommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
+    beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+    singleUseCmd.begin(beginInfo);
+
+    vk::BufferCopy copyRegion  = {};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = stagingBuffer.getSize();
+
+    singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
+                            vertexBuffer.getBuffer(),
+                            1,
+                            &copyRegion);
+
+    singleUseCmd.end();
+
+    vk::SubmitInfo submitInfo = {};
+    submitInfo.sType = vk::StructureType::eSubmitInfo;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &singleUseCmd;
+
+    graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+    graphicsQueue.waitIdle();
+    device.freeCommandBuffers(getCurrentFrame()->commandPool,
+                              1,
+                              &singleUseCmd);
+
+
 }
 
 void Renderer::initVertexBuffer() {
 
-    SD_RENDERER_DEBUG("Initialising vertex buffer.");
-    std::vector<vk::MemoryPropertyFlagBits> flags;
-    flags.reserve(2);
-    flags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
-    flags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
+    SD_RENDERER_DEBUG("Initialising staging buffer.");
+    std::vector<vk::MemoryPropertyFlagBits> stagingFlags;
+    stagingFlags.reserve(2);
+    stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
+    stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
 
-    uint32_t memoryTypeIndex = getMemoryTypeIndex(flags);
+    int32_t stagingMemoryTypeIndex = getMemoryTypeIndex(stagingFlags);
+    stagingBuffer.init(stagingMemoryTypeIndex);
+    mainDeletionQueue.push_function([=]() {stagingBuffer.destroy();});
+    stagingBuffer.allocate(stagingMemoryTypeIndex);
+    stagingBuffer.bind();
+
+    SD_RENDERER_DEBUG("Initialising vertex buffer.");
+    std::vector<vk::MemoryPropertyFlagBits> vertexFlags;
+    vertexFlags.reserve(1);
+    vertexFlags.emplace_back(vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+    uint32_t vertexMemoryTypeIndex = getMemoryTypeIndex(vertexFlags);
     vertexBuffer.init(queueFamilyIndices.graphicsFamily);
     mainDeletionQueue.push_function([=]() {vertexBuffer.destroy();});
 
-    vertexBuffer.allocate(memoryTypeIndex);
+    vertexBuffer.allocate(vertexMemoryTypeIndex);
     vertexBuffer.bind();
 
 }
