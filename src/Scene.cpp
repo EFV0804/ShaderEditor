@@ -5,7 +5,8 @@
 #include "Scene.h"
 #include "Mesh.h"
 #include "Material.h"
-
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 Scene::Scene(){
 
 };
@@ -38,7 +39,10 @@ void Scene::load() {
     shadersInfo.push_back(fragInfo);
 
     materials.emplace_back(shadersInfo, "triangleMat");
-    meshes.emplace_back();
+    meshes.emplace_back("../../assets/models/suzanne.obj");
+    for(auto& mesh : meshes){
+        mesh.loadFromFile();
+    }
     renderables.emplace_back(meshes.back(), materials.back(), model);
     Renderer::Get().loadMeshes(&renderables);
 //    Renderer::Get().updateCameraBuffer(camBuffer);

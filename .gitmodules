@@ -10,3 +10,6 @@
 [submodule "externals/assimp"]
 	path = externals/assimp
 	url = https://github.com/assimp/assimp.git
+[submodule "externals/tinyOBJ"]
+	path = externals/tinyOBJ
+	url = https://github.com/tinyobjloader/tinyobjloader.git

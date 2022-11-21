@@ -154,6 +154,12 @@ private:
         VkImage image; /**< An image :) */
         VkImageView imageView; /**< A specific part of an image to be used to render. */
     };
+    struct DepthBufferImage{
+        vk::Image depthImage;
+        vk::DeviceMemory depthImageMemory;
+        vk::ImageView depthImageView;
+    };
+    DepthBufferImage depthBufferImage;
     /**
      * The format used for the swapchain images. Defaults to 32bits unsigned normalised.
      */
@@ -376,13 +382,16 @@ private:
      * \return Returns the created image view object.
      */
     vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
-    /*!
- * \brief Gets the appropriate memory type index for the requested memory usage.
- *
- * \param [in] NOT IMPLEMENTED, see function definition. memory property flag determines the type of memory for which to return the index.
- *
- * \return the index of the requested memory type
- */
+    void createDepthBufferRessources();
+    vk::Format findDepthFormat();
+    bool hasStencilComponent(VkFormat format);
+    vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);        /*!
+     * \brief Gets the appropriate memory type index for the requested memory usage.
+     *
+     * \param [in] NOT IMPLEMENTED, see function definition. memory property flag determines the type of memory for which to return the index.
+     *
+     * \return the index of the requested memory type
+     */
     uint32_t getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBits>& flags);
     /*!
  * \brief  Returns the current frame for easy access
@@ -390,4 +399,5 @@ private:
  * \return Pointer to vector element of current frame.
  */
     FrameData *getCurrentFrame() { return &frames.at(currentFrame % MAX_FRAME_DRAWS); }
+    vk::Image createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory);
 };

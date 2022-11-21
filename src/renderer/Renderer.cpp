@@ -18,6 +18,7 @@ int Renderer::init() {
         initLogicalDevice();
         initQueues();
         initSwapchain();
+        createDepthBufferRessources();
         initRenderPass();
         initFramebuffers();
         initVertexBuffer();
@@ -71,12 +72,17 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     renderPassBeginInfo.renderArea.extent = swapchainExtent;
     renderPassBeginInfo.framebuffer = swapchainFramebuffers.at(imageToBeDrawnIndex);
 
-    const vk::ClearValue clearValues{
-            std::array<float, 4>{0.f, 0.f, .0f, .0f}
-    };
+//    const vk::ClearValue clearValues{
+//            std::array<float, 4>{0.f, 0.f, .0f, .0f}
+//    };
 
-    renderPassBeginInfo.pClearValues = &clearValues;
-    renderPassBeginInfo.clearValueCount = 1;
+// ORDER OF CLEARVALUE SHOULD BE IDENTICAL TO RENDER PASSES
+    std::array<vk::ClearValue, 2> clearValues{};
+    clearValues[0].color = {std::array<float, 4>{0.f, 0.f, .0f, .0f}};
+    clearValues[1].depthStencil = {{1.f, 0}};
+
+    renderPassBeginInfo.pClearValues = clearValues.data();
+    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 
     getCurrentFrame()->commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
@@ -481,27 +487,44 @@ void Renderer::initRenderPass() {
     colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
     colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
-    renderPassCreateInfo.attachmentCount = 1;
-    renderPassCreateInfo.pAttachments = &colorAttachment;
+    vk::AttachmentDescription depthAttachment{};
+    depthAttachment.format = findDepthFormat();
+    depthAttachment.samples = vk::SampleCountFlagBits::e1;
+    depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+    depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+    depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+    depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+    std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+
+    renderPassCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassCreateInfo.pAttachments = attachments.data();
 
     vk::AttachmentReference colorAttachmentReference = {};
     colorAttachmentReference.attachment = 0;
     colorAttachmentReference.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
+    vk::AttachmentReference depthAttachmentReference = {};
+    depthAttachmentReference.attachment = 1;
+    depthAttachmentReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
     vk::SubpassDescription subpass = {};
     subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentReference;
+    subpass.pDepthStencilAttachment = &depthAttachmentReference;
     renderPassCreateInfo.subpassCount = 1;
     renderPassCreateInfo.pSubpasses = &subpass;
 
     std::array<vk::SubpassDependency, 2> subpassDependencies;
 
     subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    subpassDependencies[0].srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+    subpassDependencies[0].srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe | vk::PipelineStageFlagBits::eEarlyFragmentTests;
     subpassDependencies[0].srcAccessMask = vk::AccessFlagBits::eMemoryRead;
     subpassDependencies[0].dstSubpass = 0;
-    subpassDependencies[0].dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    subpassDependencies[0].dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
     subpassDependencies[0].dstAccessMask = vk::AccessFlagBits::eMemoryRead | vk::AccessFlagBits::eMemoryWrite;
     subpassDependencies[0].dependencyFlags = vk::DependencyFlagBits::eDeviceGroup;
     subpassDependencies[1].srcSubpass = 0;
@@ -509,7 +532,7 @@ void Renderer::initRenderPass() {
     subpassDependencies[1].srcAccessMask = vk::AccessFlagBits::eMemoryRead | vk::AccessFlagBits::eMemoryWrite;
     subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
     subpassDependencies[1].dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-    subpassDependencies[1].dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+    subpassDependencies[1].dstAccessMask = vk::AccessFlagBits::eMemoryRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
     subpassDependencies[1].dependencyFlags = vk::DependencyFlagBits::eDeviceGroup;
     renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(subpassDependencies.size());
     renderPassCreateInfo.pDependencies = subpassDependencies.data();
@@ -529,7 +552,7 @@ void Renderer::initFramebuffers() {
     swapchainFramebuffers.resize(swapchainImages.size());
 
     for (size_t i = 0; i < swapchainImages.size(); ++i) {
-        std::array<vk::ImageView, 1> attachments = {swapchainImages[i].imageView};
+        std::array<vk::ImageView, 2> attachments = {swapchainImages[i].imageView, depthBufferImage.depthImageView};
         vk::FramebufferCreateInfo framebufferCreateInfo = {};
         framebufferCreateInfo.sType = vk::StructureType::eFramebufferCreateInfo;
         framebufferCreateInfo.renderPass = renderPass;
@@ -776,7 +799,47 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
 
     return imageView;
 }
+void Renderer::createDepthBufferRessources(){
+    vk::Format depthFormat = findDepthFormat();
+    createImage(swapchainExtent.width,
+                swapchainExtent.height,
+                depthFormat,
+                vk::ImageTiling::eOptimal,
+                vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                vk::MemoryPropertyFlagBits::eDeviceLocal,
+                depthBufferImage.depthImage,
+                depthBufferImage.depthImageMemory);
+    depthBufferImage.depthImageView = createImageView(depthBufferImage.depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
 
+    mainDeletionQueue.push_function([=]() {device.destroyImage(depthBufferImage.depthImage);
+    device.destroyImageView(depthBufferImage.depthImageView);
+    device.freeMemory(depthBufferImage.depthImageMemory);});
+
+}
+vk::Format Renderer::findDepthFormat() {
+    return findSupportedFormat(
+            {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
+            vk::ImageTiling::eOptimal,
+            vk::FormatFeatureFlagBits::eDepthStencilAttachment
+    );
+}
+bool Renderer::hasStencilComponent(VkFormat format) {
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+vk::Format Renderer::findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features){
+    for (vk::Format format : candidates) {
+        vk::FormatProperties props;
+        physicalDevice.getFormatProperties(format, &props);
+
+        if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
+            return format;
+        } else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("failed to find supported format!");
+}
 void Renderer::cleanUp() {
     device.waitIdle();
     mainDeletionQueue.flush();
@@ -941,4 +1004,40 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
     }
 
     return memoryTypeIndex;
+}
+vk::Image Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory){
+    vk::ImageCreateInfo imageInfo{};
+    imageInfo.sType = vk::StructureType::eImageCreateInfo;
+    imageInfo.imageType = vk::ImageType::e2D;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
+    imageInfo.initialLayout = vk::ImageLayout::eUndefined;
+    imageInfo.usage = usage;
+    imageInfo.samples = vk::SampleCountFlagBits::e1;
+    imageInfo.sharingMode = vk::SharingMode::eExclusive;
+
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+                                device.createImage(&imageInfo,
+                                                               nullptr,
+                                                               &image) == vk::Result::eSuccess,
+                                 "Failed to create image")
+
+    vk::MemoryRequirements memRequirements;
+    device.getImageMemoryRequirements(image, &memRequirements);
+
+    vk::MemoryAllocateInfo allocInfo{};
+    allocInfo.sType = vk::StructureType::eMemoryAllocateInfo;
+    allocInfo.allocationSize = memRequirements.size;
+    const std::vector<vk::MemoryPropertyFlagBits> flags{properties};
+//    allocInfo.memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits, flags);
+    allocInfo.memoryTypeIndex = getMemoryTypeIndex(flags);
+
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,device.allocateMemory( &allocInfo, nullptr, &imageMemory) == vk::Result::eSuccess, "Failed to allocate image");
+
+    device.bindImageMemory(image, imageMemory, 0);
 }
