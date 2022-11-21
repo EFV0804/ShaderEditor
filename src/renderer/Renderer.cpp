@@ -156,7 +156,7 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
         }
 
         getCurrentFrame()->commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
-        getCurrentFrame()->commandBuffer.bindIndexBuffer(indexBuffer.getBuffer(), 0, vk::IndexType::eUint16);
+        getCurrentFrame()->commandBuffer.bindIndexBuffer(indexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
 //        getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
         getCurrentFrame()->commandBuffer.drawIndexed(static_cast<uint32_t>(renderables->at(i).getMesh()->indices.size()), 1, 0,0,0);
 
@@ -794,14 +794,14 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 //    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
 
     vk::DeviceSize indexDeviceSize = 0;
-    std::vector<uint16_t> indices;
+    std::vector<uint32_t> indices;
 
     for(int i = 0; i < renderables->size(); i++){
-        indexDeviceSize += sizeof(renderables->at(i).getMesh()->indices.at(0) * renderables->at(i).getMesh()->indices.size());
         for(auto& index :renderables->at(i).getMesh()->indices ){
             indices.push_back(index);
         }
 
+        indexDeviceSize += indices.size() * sizeof(uint32_t);
         stagingBuffer.map(0, renderables->at(i).getMesh()->getSize());
         stagingBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
         stagingBuffer.unMap();
@@ -831,7 +831,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     vk::BufferCopy copyRegion  = {};
     copyRegion.srcOffset = 0;
     copyRegion.dstOffset = 0;
-    copyRegion.size = stagingBuffer.getSize();
+    copyRegion.size =vertexBuffer.getSize();
 
     singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
                             vertexBuffer.getBuffer(),
@@ -855,6 +855,8 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
         stagingBuffer.unMap();
     }
 
+    copyRegion.size = indexBuffer.getSize();
+    SD_RENDERER_DEBUG("Index Buffer Size is : {}", indexBuffer.getSize());
     singleUseCmd.begin(beginInfo);
 
     singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
@@ -870,7 +872,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     indexSubmitInfo.pCommandBuffers = &singleUseCmd;
 
     graphicsQueue.submit(1, &indexSubmitInfo, VK_NULL_HANDLE);
-
+    graphicsQueue.waitIdle();
     device.freeCommandBuffers(getCurrentFrame()->commandPool,
                               1,
                               &singleUseCmd);
@@ -904,7 +906,7 @@ void Renderer::initVertexBuffer() {
 
 }
 void Renderer::initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size,
-                               std::vector<uint16_t> indices) {
+                               std::vector<uint32_t> indices) {
 
     indexBuffer.setSize(size);
     std::vector<vk::MemoryPropertyFlagBits> indexFlags;
@@ -931,7 +933,6 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
         vk::MemoryType memoryType = memoryProperties.memoryTypes[currentMemoryTypeIndex];
         if(std::all_of(flags.begin(), flags.end(), [&memoryType](vk::MemoryPropertyFlagBits flag){return flag & memoryType.propertyFlags;}))
         {
-            SD_RENDERER_DEBUG("Matching memory types");
             return currentMemoryTypeIndex;
         }
         else{
