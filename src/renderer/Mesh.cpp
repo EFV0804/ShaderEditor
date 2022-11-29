@@ -28,9 +28,17 @@ VertexInputDescription Vertex::getVertexInputDescription(){
     colorAttribDescription.format = vk::Format::eR32G32B32Sfloat;
     colorAttribDescription.offset = offsetof(Vertex, color);
 
+    vk::VertexInputAttributeDescription normalAttribDescription {};
+    normalAttribDescription.binding = 0;
+    normalAttribDescription.location = 2;
+    normalAttribDescription.format = vk::Format::eR32G32B32Sfloat;
+    normalAttribDescription.offset = offsetof(Vertex, normal);
+
+
 
     description.attributesDescriptions.emplace_back(positionAttribDescription);
     description.attributesDescriptions.emplace_back(colorAttribDescription);
+    description.attributesDescriptions.emplace_back(normalAttribDescription);
 
     return description;
 }

@@ -84,8 +84,8 @@ public:
      */
      const BufferState& getState() const {return state;}
      const vk::Buffer& getBuffer() const {return buffer;}
-     const uint64_t& getSize() const {return size;}
-     void setSize(const uint16_t& pSize) {size = pSize;}
+     const uint32_t& getSize() const {return size;}
+     void setSize(const uint32_t& pSize) {size = pSize;}
      /*!
       * \brief utility getter for buffer memory.
       * @return member vk::DeviceMemory bufferMemory
@@ -101,7 +101,7 @@ private:
     /*
      * Size of the memory required for the buffer
      */
-    uint64_t size = 0;
+    uint32_t size = 0;
     /*
      * The buffer's usage.
      */

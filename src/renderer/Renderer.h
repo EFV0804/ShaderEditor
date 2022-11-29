@@ -12,6 +12,7 @@
 #include <memory>
 #include "Logger.h"
 #include "Buffer.h"
+#include "Mesh.h"
 //#include "VkUtilities.h"
 
 class Renderable;
@@ -151,8 +152,8 @@ private:
      * Struct to store and organise the image and image view that constitute the swapchain images.
      */
     struct SwapchainImage {
-        VkImage image; /**< An image :) */
-        VkImageView imageView; /**< A specific part of an image to be used to render. */
+        vk::Image image; /**< An image :) */
+        vk::ImageView imageView; /**< A specific part of an image to be used to render. */
     };
     struct DepthBufferImage{
         vk::Image depthImage;
@@ -252,6 +253,10 @@ private:
     /*
      * a Buffer object destined to store vertices to be rendered.
      */
+    vk::DeviceSize indexDeviceSize = 0;
+    std::vector<uint32_t> indices;
+    vk::DeviceSize vertexDeviceSize = 0;
+    std::vector<Vertex> vertices;
     Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst, 50000, vk::SharingMode::eExclusive};
     Buffer indexBuffer{vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst, 50000, vk::SharingMode::eExclusive};
     Buffer stagingBuffer{vk::BufferUsageFlagBits::eTransferSrc, 50000, vk::SharingMode::eExclusive};

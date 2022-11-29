@@ -48,7 +48,6 @@ GraphicsPipeline Material::loadPipeline(std::vector<ShaderInfo> shadersInfo) {
             pushConstants.push_back(pushConstant);
         }
     }
-    SD_RENDERER_DEBUG(pushConstants.size());
     //Copy elision, not call to copy constructor is made.
     return GraphicsPipeline{ stages, pushConstants};
 }
