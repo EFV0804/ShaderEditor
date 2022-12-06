@@ -75,12 +75,12 @@ bool Mesh::loadFromFile() {
     tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename, R"(D:\repos\ShaderEditor\assets\models)");
     //make sure to output the warnings to the console, in case there are issues with the file
     if (!warn.empty()) {
-        SD_RENDERER_WARN(warn);
+        SE_RENDERER_WARN(warn);
     }
     //if we have any error, print it to the console, and break the mesh loading.
     //This happens if the file can't be found or is malformed
     if (!err.empty()) {
-        SD_RENDERER_ERROR(err);
+        SE_RENDERER_ERROR(err);
         return false;
     }
 
