@@ -8,6 +8,9 @@
 Window::Window(int pHeight, int pWidth): size(pHeight,pWidth) {
 
 }
+Window::~Window(){
+    cleanUp();
+}
 void Window::init(){
 
     SE_UI_DEBUG("Window initialisation");

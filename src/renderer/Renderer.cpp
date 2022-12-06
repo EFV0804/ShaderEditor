@@ -828,7 +828,7 @@ vk::Format Renderer::findSupportedFormat(const std::vector<vk::Format>& candidat
 void Renderer::cleanUp() {
     device.waitIdle();
     mainDeletionQueue.flush();
-    window.cleanUp();
+//    window.cleanUp();
     instance.destroy();
     SE_RENDERER_INFO("Renderer clean up successful");
 

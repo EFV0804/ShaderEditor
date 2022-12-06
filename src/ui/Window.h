@@ -22,7 +22,7 @@ class Window {
 
 public:
     Window(int pHeight, int pWidth);
-    ~Window() = default;
+    ~Window();
     Window &operator=(const Window&) = delete;
     Window(const Window&) = delete;
 
