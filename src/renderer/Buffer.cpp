@@ -6,7 +6,7 @@
 #include "Renderer.h"
 #include <iostream>
 
-Buffer::Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize, vk::SharingMode pSharingMode) :
+Buffer::Buffer(vk::BufferUsageFlags pUsage, uint32_t pSize, vk::SharingMode pSharingMode) :
         usage{pUsage},
         size{pSize},
         sharingMode{pSharingMode}{

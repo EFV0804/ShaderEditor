@@ -12,6 +12,7 @@
 #include <memory>
 #include "Logger.h"
 #include "Buffer.h"
+#include "Mesh.h"
 //#include "VkUtilities.h"
 
 class Renderable;
@@ -148,13 +149,6 @@ private:
  */
     vk::SurfaceKHR surface;
     /**
-     * Struct to store and organise the image and image view that constitute the swapchain images.
-     */
-    struct SwapchainImage {
-        VkImage image; /**< An image :) */
-        VkImageView imageView; /**< A specific part of an image to be used to render. */
-    };
-    /**
      * The format used for the swapchain images. Defaults to 32bits unsigned normalised.
      */
     vk::Format swapchainImageFormat{vk::Format::eB8G8R8A8Unorm};
@@ -169,7 +163,7 @@ private:
     /**
      * A vector of swapchain images, that are used as attachments for framebuffers.
      */
-    std::vector<SwapchainImage> swapchainImages;
+    std::vector<vk::ImageView> swapchainImagesViews;
     /**
      * \brief Provides information about the swapchain.
      *
@@ -182,6 +176,12 @@ private:
         std::vector<vk::SurfaceFormatKHR> supportedFormats; /**< A vector of the surface's supported formats. */
         std::vector<vk::PresentModeKHR> supportedPresentationModes; /**< A vector the surface's supported presentation modes. */
     };
+    struct DepthBufferImage{
+        vk::Image depthImage;
+        vk::DeviceMemory depthImageMemory;
+        vk::ImageView depthImageView;
+    };
+    DepthBufferImage depthBufferImage;
     /**
      * A Vulkan representation of a chosen GPU.
      */
@@ -246,7 +246,12 @@ private:
     /*
      * a Buffer object destined to store vertices to be rendered.
      */
+    vk::DeviceSize indexDeviceSize = 0;
+    std::vector<uint32_t> indices;
+    vk::DeviceSize vertexDeviceSize = 0;
+    std::vector<Vertex> vertices;
     Buffer vertexBuffer{vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst, 50000, vk::SharingMode::eExclusive};
+    Buffer indexBuffer{vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst, 50000, vk::SharingMode::eExclusive};
     Buffer stagingBuffer{vk::BufferUsageFlagBits::eTransferSrc, 50000, vk::SharingMode::eExclusive};
     vk::DescriptorSetLayoutBinding cameraDescriptorBinding;
     vk::DescriptorSetLayout cameraDescriptorLayout;
@@ -295,6 +300,8 @@ private:
      * \brief initialises vertex buffer.
      */
     void initVertexBuffer();
+    void initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size,
+                         std::vector<uint32_t> indices);
     /*!
      * \brief initialises physical device.
      */
@@ -373,13 +380,16 @@ private:
      * \return Returns the created image view object.
      */
     vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
-    /*!
- * \brief Gets the appropriate memory type index for the requested memory usage.
- *
- * \param [in] NOT IMPLEMENTED, see function definition. memory property flag determines the type of memory for which to return the index.
- *
- * \return the index of the requested memory type
- */
+    void createDepthBufferRessources();
+    vk::Format findDepthFormat();
+    bool hasStencilComponent(VkFormat format);
+    vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features);        /*!
+     * \brief Gets the appropriate memory type index for the requested memory usage.
+     *
+     * \param [in] NOT IMPLEMENTED, see function definition. memory property flag determines the type of memory for which to return the index.
+     *
+     * \return the index of the requested memory type
+     */
     uint32_t getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBits>& flags);
     /*!
  * \brief  Returns the current frame for easy access
@@ -387,4 +397,5 @@ private:
  * \return Pointer to vector element of current frame.
  */
     FrameData *getCurrentFrame() { return &frames.at(currentFrame % MAX_FRAME_DRAWS); }
+    void createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory);
 };

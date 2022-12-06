@@ -4,8 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <string>
 #include "../Renderable.h"
-#include <algorithm>
-#include <numeric>
+
 
 int Renderer::init() {
 
@@ -19,6 +18,7 @@ int Renderer::init() {
         initLogicalDevice();
         initQueues();
         initSwapchain();
+        createDepthBufferRessources();
         initRenderPass();
         initFramebuffers();
         initVertexBuffer();
@@ -72,12 +72,17 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     renderPassBeginInfo.renderArea.extent = swapchainExtent;
     renderPassBeginInfo.framebuffer = swapchainFramebuffers.at(imageToBeDrawnIndex);
 
-    const vk::ClearValue clearValues{
-            std::array<float, 4>{0.f, 0.f, .0f, .0f}
-    };
+//    const vk::ClearValue clearValues{
+//            std::array<float, 4>{0.f, 0.f, .0f, .0f}
+//    };
 
-    renderPassBeginInfo.pClearValues = &clearValues;
-    renderPassBeginInfo.clearValueCount = 1;
+// ORDER OF CLEARVALUE SHOULD BE IDENTICAL TO RENDER PASSES
+    std::array<vk::ClearValue, 2> clearValues{};
+    clearValues[0].color = {std::array<float, 4>{0.f, 0.f, .0f, .0f}};
+    clearValues[1].depthStencil = {{1.f, 0}};
+
+    renderPassBeginInfo.pClearValues = clearValues.data();
+    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 
     getCurrentFrame()->commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
@@ -157,7 +162,9 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
         }
 
         getCurrentFrame()->commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
-        getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
+        getCurrentFrame()->commandBuffer.bindIndexBuffer(indexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
+//        getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
+        getCurrentFrame()->commandBuffer.drawIndexed(static_cast<uint32_t>(renderables->at(i).getMesh()->indices.size()), 1, 0,0,0);
 
     }
 }
@@ -313,26 +320,15 @@ void Renderer::initSwapchain() {
     swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
     swapchain = device.createSwapchainKHR(swapchainCreateInfo);
-    mainDeletionQueue.push_function([=]() {
-        device.destroySwapchainKHR(swapchain);
-    });
+
 
     swapchainImageFormat = surfaceFormat.format;
 
+//    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, device.getSwapchainImagesKHR(swapchain) == vk::Result::eSuccess, "Swapchain image creation failed.")
 
-    /// CREATE IMAGES FOR SWAPCHAIN
-    /// These are destroyed by the destroy call on the swapchain, no need to explicitly destroy them
-    std::vector<vk::Image> images{device.getSwapchainImagesKHR(swapchain)};
-    swapchainImages.reserve(images.size());
-
-    for (vk::Image image: images) {
-        swapchainImages.emplace_back();
-        swapchainImages.back().image = image;
-        swapchainImages.back().imageView = createImageView(image,
-                                                           swapchainImageFormat,
-                                                           vk::ImageAspectFlagBits::eColor);
-    }
-
+    mainDeletionQueue.push_function([=]() {
+        device.destroySwapchainKHR(swapchain);
+    });
 
 }
 
@@ -480,35 +476,53 @@ void Renderer::initRenderPass() {
     colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
     colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
-    renderPassCreateInfo.attachmentCount = 1;
-    renderPassCreateInfo.pAttachments = &colorAttachment;
+    vk::AttachmentDescription depthAttachment{};
+    depthAttachment.format = findDepthFormat();
+    depthAttachment.samples = vk::SampleCountFlagBits::e1;
+    depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+    depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+    depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+    depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+    std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+
+    renderPassCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassCreateInfo.pAttachments = attachments.data();
 
     vk::AttachmentReference colorAttachmentReference = {};
     colorAttachmentReference.attachment = 0;
     colorAttachmentReference.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
+    vk::AttachmentReference depthAttachmentReference = {};
+    depthAttachmentReference.attachment = 1;
+    depthAttachmentReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
     vk::SubpassDescription subpass = {};
     subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentReference;
+    subpass.pDepthStencilAttachment = &depthAttachmentReference;
     renderPassCreateInfo.subpassCount = 1;
     renderPassCreateInfo.pSubpasses = &subpass;
 
     std::array<vk::SubpassDependency, 2> subpassDependencies;
-
+//color
     subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    subpassDependencies[0].srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+    subpassDependencies[0].srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe | vk::PipelineStageFlagBits::eEarlyFragmentTests;
     subpassDependencies[0].srcAccessMask = vk::AccessFlagBits::eMemoryRead;
     subpassDependencies[0].dstSubpass = 0;
-    subpassDependencies[0].dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    subpassDependencies[0].dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
     subpassDependencies[0].dstAccessMask = vk::AccessFlagBits::eMemoryRead | vk::AccessFlagBits::eMemoryWrite;
     subpassDependencies[0].dependencyFlags = vk::DependencyFlagBits::eDeviceGroup;
-    subpassDependencies[1].srcSubpass = 0;
-    subpassDependencies[1].srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    subpassDependencies[1].srcAccessMask = vk::AccessFlagBits::eMemoryRead | vk::AccessFlagBits::eMemoryWrite;
-    subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    subpassDependencies[1].dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-    subpassDependencies[1].dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+//depth
+    subpassDependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpassDependencies[1].dstSubpass = 0;
+    subpassDependencies[1].srcStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+    subpassDependencies[1].srcAccessMask = vk::AccessFlagBits::eNone;
+    subpassDependencies[1].dstStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+    subpassDependencies[1].dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
     subpassDependencies[1].dependencyFlags = vk::DependencyFlagBits::eDeviceGroup;
     renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(subpassDependencies.size());
     renderPassCreateInfo.pDependencies = subpassDependencies.data();
@@ -525,10 +539,17 @@ void Renderer::initRenderPass() {
 void Renderer::initFramebuffers() {
 
     SD_RENDERER_DEBUG("Frame buffers initialisation");
-    swapchainFramebuffers.resize(swapchainImages.size());
+    std::vector<vk::Image> images = device.getSwapchainImagesKHR(swapchain);
 
-    for (size_t i = 0; i < swapchainImages.size(); ++i) {
-        std::array<vk::ImageView, 1> attachments = {swapchainImages[i].imageView};
+    swapchainImagesViews.reserve(images.size());
+    swapchainFramebuffers.resize(images.size());
+
+    for (size_t i = 0; i < images.size(); ++i) {
+        swapchainImagesViews.emplace_back(createImageView(images.at(i),
+                                                          swapchainImageFormat,
+                                                          vk::ImageAspectFlagBits::eColor));
+
+        std::array<vk::ImageView, 2> attachments = {swapchainImagesViews.at(i), depthBufferImage.depthImageView};
         vk::FramebufferCreateInfo framebufferCreateInfo = {};
         framebufferCreateInfo.sType = vk::StructureType::eFramebufferCreateInfo;
         framebufferCreateInfo.renderPass = renderPass;
@@ -537,10 +558,12 @@ void Renderer::initFramebuffers() {
         framebufferCreateInfo.width = swapchainExtent.width;
         framebufferCreateInfo.height = swapchainExtent.height;
         framebufferCreateInfo.layers = 1;
-        swapchainFramebuffers[i] = device.createFramebuffer(framebufferCreateInfo);
+        swapchainFramebuffers.at(i) = device.createFramebuffer(framebufferCreateInfo);
 
         mainDeletionQueue.push_function([=]() {
-            device.destroyFramebuffer(swapchainFramebuffers[i]);
+            device.destroyFramebuffer(swapchainFramebuffers.at(i));
+            device.destroyImageView(swapchainImagesViews.at(i));
+
         });
     }
     SD_RENDERER_DEBUG("Frame buffers added to deletion queue");
@@ -770,12 +793,55 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
     imageView = device.createImageView(imageViewCreateInfo);
 
     mainDeletionQueue.push_function([=]() {
-        device.destroy(imageView);
+//        device.destroy(imageView);
     });
 
     return imageView;
 }
+void Renderer::createDepthBufferRessources(){
+    vk::Format depthFormat = findDepthFormat();
+    createImage(swapchainExtent.width,
+                swapchainExtent.height,
+                depthFormat,
+                vk::ImageTiling::eOptimal,
+                vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                vk::MemoryPropertyFlagBits::eDeviceLocal,
+                depthBufferImage.depthImage,
+                depthBufferImage.depthImageMemory);
+    depthBufferImage.depthImageView = createImageView(depthBufferImage.depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
 
+    mainDeletionQueue.push_function([=]() {
+        SD_RENDERER_DEBUG("deleting depth buffer imageView");
+    device.destroyImageView(depthBufferImage.depthImageView);
+        SD_RENDERER_DEBUG("deleting depth buffer image");
+    device.destroyImage(depthBufferImage.depthImage);
+    device.freeMemory(depthBufferImage.depthImageMemory);});
+
+}
+vk::Format Renderer::findDepthFormat() {
+    return findSupportedFormat(
+            {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
+            vk::ImageTiling::eOptimal,
+            vk::FormatFeatureFlagBits::eDepthStencilAttachment
+    );
+}
+bool Renderer::hasStencilComponent(VkFormat format) {
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+vk::Format Renderer::findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features){
+    for (vk::Format format : candidates) {
+        vk::FormatProperties props;
+        physicalDevice.getFormatProperties(format, &props);
+
+        if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
+            return format;
+        } else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("failed to find supported format!");
+}
 void Renderer::cleanUp() {
     device.waitIdle();
     mainDeletionQueue.flush();
@@ -792,77 +858,198 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised.")
 //    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
 
+// Get vertices and indices size
+// Get single use cmd buffer
+
+// 1. Indices
+//      a.copy indices to staging buffer
+//      b.Region copy staging buffer to index buffer
+//          - init index buffer
+//          - get buffer alloc info  + allocate cmd buffer
+//          - begin cmd record
+//          - region copy
+//          - end cmd record
+//          - submit
+//          - free cmd buffer
+
+// 1. Vertices
+//      a.copy vertices to staging buffer
+//      b.Region copy staging buffer to vertexBuffer
+            //cmd record begin
+            //region copy
+            //cmd record end
+            //submit
+            // free cmd buffer
+
+    //Indices size && vertices size
+
+
     for(int i = 0; i < renderables->size(); i++){
-        stagingBuffer.map(0, renderables->at(i).getMesh()->getSize());
-        stagingBuffer.copy(renderables->at(i).getMesh()->vertices.data(), renderables->at(i).getMesh()->getSize());
-        stagingBuffer.unMap();
+        for(auto& index :renderables->at(i).getMesh()->indices ){
+            indices.push_back(index);
+        }
+        for(auto& vertex : renderables->at(i).getMesh()->vertices){
+            vertices.push_back(vertex);
+        }
+
+        indexDeviceSize += indices.size() * sizeof(uint32_t);
+        vertexDeviceSize += vertices.size() * sizeof(Vertex);
     }
-
-    vk::CommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
-    allocInfo.level = vk::CommandBufferLevel::ePrimary;
-    allocInfo.commandPool = getCurrentFrame()->commandPool;
-    allocInfo.commandBufferCount = 1;
-
-    vk::CommandBuffer singleUseCmd;
-    device.allocateCommandBuffers(&allocInfo, &singleUseCmd);
-    vk::CommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
-    beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-
-    singleUseCmd.begin(beginInfo);
-
-    vk::BufferCopy copyRegion  = {};
-    copyRegion.srcOffset = 0;
-    copyRegion.dstOffset = 0;
-    copyRegion.size = stagingBuffer.getSize();
-
-    singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
-                            vertexBuffer.getBuffer(),
-                            1,
-                            &copyRegion);
-
-    singleUseCmd.end();
-
-    vk::SubmitInfo submitInfo = {};
-    submitInfo.sType = vk::StructureType::eSubmitInfo;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &singleUseCmd;
-
-    graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
-    graphicsQueue.waitIdle();
-    device.freeCommandBuffers(getCurrentFrame()->commandPool,
-                              1,
-                              &singleUseCmd);
-
-
-}
-
-void Renderer::initVertexBuffer() {
-
-    SD_RENDERER_DEBUG("Initialising staging buffer.");
     std::vector<vk::MemoryPropertyFlagBits> stagingFlags;
     stagingFlags.reserve(2);
     stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
     stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
 
     int32_t stagingMemoryTypeIndex = getMemoryTypeIndex(stagingFlags);
+    stagingBuffer.setSize(vertexDeviceSize);
     stagingBuffer.init(stagingMemoryTypeIndex);
-    mainDeletionQueue.push_function([=]() {stagingBuffer.destroy();});
+
     stagingBuffer.allocate(stagingMemoryTypeIndex);
     stagingBuffer.bind();
 
-    SD_RENDERER_DEBUG("Initialising vertex buffer.");
+    //get buffer allocation info + allocate cmd buffer
+    vk::CommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
+    allocInfo.level = vk::CommandBufferLevel::ePrimary;
+    allocInfo.commandPool = getCurrentFrame()->commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    //Single use command buffer
+    vk::CommandBuffer singleUseCmd;
+    vk::CommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
+    beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+    vk::Result cmdAlloc = device.allocateCommandBuffers(&allocInfo, &singleUseCmd);
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, cmdAlloc == vk::Result::eSuccess, "Command Buffer allocation failed.");
+
+
+    vk::SubmitInfo submitInfo = {};
+    submitInfo.sType = vk::StructureType::eSubmitInfo;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &singleUseCmd;
+
+
+    //---------------------------------//
+
+    // INDICES
+    // Copy indices to staging buffer
+    stagingBuffer.map(0, indexDeviceSize);
+    stagingBuffer.copy(indices.data(), indexDeviceSize);
+    stagingBuffer.unMap();
+    // Copy indices from staging buffer to index buffer
+        // Init index buffer
+    std::vector<vk::MemoryPropertyFlagBits> flags;
+    flags.push_back(vk::MemoryPropertyFlagBits::eHostCoherent);
+    flags.push_back(vk::MemoryPropertyFlagBits::eHostVisible);
+    initIndexBuffer(flags, indexDeviceSize, indices);
+
+
+        // Copy to index buffer
+    vk::BufferCopy indexCopyRegion  = {};
+    indexCopyRegion.srcOffset = 0;
+    indexCopyRegion.dstOffset = 0;
+    indexCopyRegion.size = indexBuffer.getSize();
+
+    singleUseCmd.begin(beginInfo);
+
+    singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
+                            indexBuffer.getBuffer(),
+                            1,
+                            &indexCopyRegion);
+
+    singleUseCmd.end();
+
+
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+                                graphicsQueue.submit(1,
+                                                     &submitInfo,
+                                                     VK_NULL_HANDLE) == vk::Result::eSuccess,
+                                "Failed to submit staging buffer copying");
+    graphicsQueue.waitIdle();
+
+
+//----------------------------------------------------------------------------//
+// VERTICES
     std::vector<vk::MemoryPropertyFlagBits> vertexFlags;
     vertexFlags.reserve(1);
     vertexFlags.emplace_back(vk::MemoryPropertyFlagBits::eDeviceLocal);
 
     uint32_t vertexMemoryTypeIndex = getMemoryTypeIndex(vertexFlags);
-    vertexBuffer.init(queueFamilyIndices.graphicsFamily);
-    mainDeletionQueue.push_function([=]() {vertexBuffer.destroy();});
 
+    vertexBuffer.setSize(vertexDeviceSize);
+    vertexBuffer.init(queueFamilyIndices.graphicsFamily);
     vertexBuffer.allocate(vertexMemoryTypeIndex);
     vertexBuffer.bind();
+
+    // Copy indices to staging buffer
+    stagingBuffer.map(0, vertexDeviceSize);
+    stagingBuffer.copy(vertices.data(), vertexDeviceSize);
+    stagingBuffer.unMap();
+
+
+    singleUseCmd.begin(beginInfo);
+
+    vk::BufferCopy vertexCopyRegion  = {};
+    vertexCopyRegion.srcOffset = 0;
+    vertexCopyRegion.dstOffset = 0;
+    vertexCopyRegion.size = vertexDeviceSize;
+
+    singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
+                            vertexBuffer.getBuffer(),
+                            1,
+                            &vertexCopyRegion);
+
+    singleUseCmd.end();
+
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+                                graphicsQueue.submit(1,
+                                                     &submitInfo,
+                                                     VK_NULL_HANDLE) == vk::Result::eSuccess,
+                                "Failed to submit staging buffer copying");
+    graphicsQueue.waitIdle();
+    device.freeCommandBuffers(getCurrentFrame()->commandPool,
+                              1,
+                              &singleUseCmd);
+}
+
+void Renderer::initVertexBuffer() {
+
+    SD_RENDERER_DEBUG("Initialising staging buffer.");
+//    std::vector<vk::MemoryPropertyFlagBits> stagingFlags;
+//    stagingFlags.reserve(2);
+//    stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
+//    stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
+//
+//    int32_t stagingMemoryTypeIndex = getMemoryTypeIndex(stagingFlags);
+//    stagingBuffer.init(stagingMemoryTypeIndex);
+//
+//    stagingBuffer.allocate(stagingMemoryTypeIndex);
+//    stagingBuffer.bind();
+
+    SD_RENDERER_DEBUG("Initialising vertex buffer.");
+//    std::vector<vk::MemoryPropertyFlagBits> vertexFlags;
+//    vertexFlags.reserve(1);
+//    vertexFlags.emplace_back(vk::MemoryPropertyFlagBits::eDeviceLocal);
+//
+//    uint32_t vertexMemoryTypeIndex = getMemoryTypeIndex(vertexFlags);
+//    vertexBuffer.init(queueFamilyIndices.graphicsFamily);
+    mainDeletionQueue.push_function([=]() {stagingBuffer.destroy();});
+    mainDeletionQueue.push_function([=]() {vertexBuffer.destroy();});
+
+
+
+}
+void Renderer::initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size,
+                               std::vector<uint32_t> indices) {
+
+    indexBuffer.setSize(size);
+    std::vector<vk::MemoryPropertyFlagBits> indexFlags;
+    uint32_t indexMemoryTypeIndex = getMemoryTypeIndex(indexFlags);
+    indexBuffer.init(queueFamilyIndices.graphicsFamily);
+    indexBuffer.allocate(indexMemoryTypeIndex);
+    indexBuffer.bind();
+    mainDeletionQueue.push_function([=]() {indexBuffer.destroy();});
 
 }
 
@@ -873,14 +1060,13 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
     uint32_t memoryTypeIndex = uint32_t(~0);
     // TODO make sure it's big enough for buffer requested size
 
-    
+
     for (uint32_t currentMemoryTypeIndex = 0;
          currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex)
     {
         vk::MemoryType memoryType = memoryProperties.memoryTypes[currentMemoryTypeIndex];
         if(std::all_of(flags.begin(), flags.end(), [&memoryType](vk::MemoryPropertyFlagBits flag){return flag & memoryType.propertyFlags;}))
         {
-            SD_RENDERER_DEBUG("Matching memory types");
             return currentMemoryTypeIndex;
         }
         else{
@@ -890,4 +1076,39 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
 
     return memoryTypeIndex;
 }
+void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory){
+    vk::ImageCreateInfo imageInfo{};
+    imageInfo.sType = vk::StructureType::eImageCreateInfo;
+    imageInfo.imageType = vk::ImageType::e2D;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
+    imageInfo.initialLayout = vk::ImageLayout::eUndefined;
+    imageInfo.usage = usage;
+    imageInfo.samples = vk::SampleCountFlagBits::e1;
+    imageInfo.sharingMode = vk::SharingMode::eExclusive;
 
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+                                device.createImage(&imageInfo,
+                                                               nullptr,
+                                                               &image) == vk::Result::eSuccess,
+                                 "Failed to create image")
+
+    vk::MemoryRequirements memRequirements;
+    device.getImageMemoryRequirements(image, &memRequirements);
+
+    vk::MemoryAllocateInfo allocInfo{};
+    allocInfo.sType = vk::StructureType::eMemoryAllocateInfo;
+    allocInfo.allocationSize = memRequirements.size;
+    const std::vector<vk::MemoryPropertyFlagBits> flags{properties};
+//    allocInfo.memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits, flags);
+    allocInfo.memoryTypeIndex = getMemoryTypeIndex(flags);
+
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,device.allocateMemory( &allocInfo, nullptr, &imageMemory) == vk::Result::eSuccess, "Failed to allocate image");
+
+    device.bindImageMemory(image, imageMemory, 0);
+}
