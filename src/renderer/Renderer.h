@@ -1,7 +1,6 @@
 #pragma once
-#define GLFW_INCLUDE_VULKAN
 
-#include <GLFW/glfw3.h>
+
 #include "glm/glm.hpp"
 #include <vulkan/vulkan.hpp>
 #include <stdexcept>
@@ -13,6 +12,7 @@
 #include "Logger.h"
 #include "Buffer.h"
 #include "Mesh.h"
+#include "Window.h"
 //#include "VkUtilities.h"
 
 class Renderable;
@@ -69,14 +69,20 @@ public:
     }
 
     bool isInit = false;
-    /**
-     * Point to the GLFW window.
-     */
-    GLFWwindow *window = nullptr;
+//    /**
+//     * Point to the GLFW window.
+//     */
+//    GLFWwindow *window = nullptr;
+
+    Window window{800,600};
     /**
      * A Vulkan logical device, i.e a description of which physical device features are being used.
      */
     vk::Device device;
+    /**
+* Vulkan instance
+*/
+    vk::Instance instance;
     /*!
 *  \brief Initialises the renderer by calling the initialisations functions of required components.
 *  \return int for SUCCESS or FAILURE
@@ -136,10 +142,7 @@ public:
 */
     int currentFrame = 0;
 private:
-    /**
-    * Vulkan instance
-    */
-    vk::Instance instance;
+
     /*
      * Describes how the rendering process should go. Manages the relationship between attachments and subpasses.
      */
@@ -256,10 +259,10 @@ private:
     vk::DescriptorSetLayoutBinding cameraDescriptorBinding;
     vk::DescriptorSetLayout cameraDescriptorLayout;
     vk::DescriptorPool descriptorPool;
-    /*!
-     * \brief Creates a GLFW window.
-     */
-    void initWindow();
+//    /*!
+//     * \brief Creates a GLFW window.
+//     */
+//    void initWindow();
     /*!
      * \brief initialises the Vulkan instance.
      */

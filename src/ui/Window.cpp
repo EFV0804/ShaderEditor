@@ -3,9 +3,33 @@
 //
 
 #include "Window.h"
+#include "Renderer.h"
 
-std::string Window::testFunc() {
+Window::Window(int pHeight, int pWidth): size(pHeight,pWidth) {
 
-    std::string test = "Window class test string";
-    return test;
+}
+void Window::init(){
+
+    SE_UI_DEBUG("Window initialisation");
+
+    std::string name = "The Best Window";
+    glfwInit();
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    window = glfwCreateWindow(size.height, size.width, name.c_str(), nullptr, nullptr);
+
+    if (window == nullptr) {
+        SE_UI_ERROR("Window failed to initialise");
+    }
+    SE_UI_DEBUG("Window initialised successfully");
+    isInit = true;
+}
+void Window::updateSize(){
+    glfwGetFramebufferSize(window, &size.width, &size.height);
+
+}
+void Window::cleanUp(){
+    glfwDestroyWindow(window);
+    glfwTerminate();
+    SE_UI_INFO("Window destruction and GLFW termination successful");
 }

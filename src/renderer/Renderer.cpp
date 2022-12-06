@@ -3,13 +3,13 @@
 #include <iostream>
 #include <GLFW/glfw3.h>
 #include <string>
-#include "../Renderable.h"
+#include "Renderable.h"
 
 
 int Renderer::init() {
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !isInit, "Renderer is already initialised, cannot be initialised twice.")
-    initWindow();
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !isInit, "Renderer is already initialised, cannot be initialised twice.")
+    window.init();
     try {
         initInstance();
         initSurface();
@@ -28,10 +28,10 @@ int Renderer::init() {
         createSynchronisation();
     }
     catch (const std::runtime_error &e) {
-        SD_RENDERER_ERROR("Renderer failed to initialise: {}", e.what());
+        SE_RENDERER_ERROR("Renderer failed to initialise: {}", e.what());
         return EXIT_FAILURE;
     }
-    SD_RENDERER_INFO("Renderer initialised successfully");
+    SE_RENDERER_INFO("Renderer initialised successfully");
 
     isInit = true;
     return EXIT_SUCCESS;
@@ -40,11 +40,11 @@ int Renderer::init() {
 
 //// DRAW
 void Renderer::draw(std::vector<Renderable> *renderables) {
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised, initialise before calling rendering functions")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised, initialise before calling rendering functions")
 
 //******************--- START NEW FRAME ---******************//
     vk::Result result = device.waitForFences(getCurrentFrame()->renderFence, VK_TRUE, 1000000000);
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, result == vk::Result::eSuccess,
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, result == vk::Result::eSuccess,
                                 "Device timed out waiting for previous frame.");
     device.resetFences(getCurrentFrame()->renderFence);
     getCurrentFrame()->commandBuffer.reset();
@@ -120,7 +120,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     presentInfo.pImageIndices = &imageToBeDrawnIndex;
 
     vk::Result presentationResult = graphicsQueue.presentKHR(presentInfo);
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, presentationResult == vk::Result::eSuccess,
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, presentationResult == vk::Result::eSuccess,
                                 "Graphics queue failed to present correctly.")
 
 //************--- NEXT FRAME INCREMENTATION ---************//
@@ -128,7 +128,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
 }
 
 void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised, initialise before calling rendering functions")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised, initialise before calling rendering functions")
     //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
 
     const Material* lastMaterial = nullptr;
@@ -169,24 +169,8 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
     }
 }
 
-void Renderer::initWindow() {
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !isInit, "Renderer is not initialised, initialise renderer before window initialisation.")
-    //TODO Abstract GLFW code into a window class to allow easy replacement of GLFW if needed.
-    SD_RENDERER_DEBUG("Window initialisation");
-    std::string name = "The Best Window";
-    glfwInit();
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    window = glfwCreateWindow(800, 600, name.c_str(), nullptr, nullptr);
-
-    if (window == nullptr) {
-        SD_RENDERER_ERROR("Window failed to initialise");
-    }
-    SD_RENDERER_DEBUG("Window initialised successfully");
-}
-
 void Renderer::initInstance() {
-    SD_RENDERER_DEBUG("Instance initialisation");
+    SE_RENDERER_DEBUG("Instance initialisation");
     vk::ApplicationInfo AppInfo{
             "ShaderEditor",
             0,
@@ -220,7 +204,7 @@ void Renderer::initInstance() {
                                               layers.data());
 
     if (!checkInstanceExtensionSupport(instanceExtensions)) {
-        SD_RENDERER_ERROR("Instance doesn't support extension required");
+        SE_RENDERER_ERROR("Instance doesn't support extension required");
 //        throw std::runtime_error("");
     }
     instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size());
@@ -231,14 +215,14 @@ void Renderer::initInstance() {
 //    mainDeletionQueue.push_function([=](){
 //       instance.destroy();
 //    });
-    SD_RENDERER_DEBUG("Vulkan instance initialised");
+    SE_RENDERER_DEBUG("Vulkan instance initialised");
 }
 
 void Renderer::initLogicalDevice() {
 
 //    VK_KHR_SWAPCHAIN_EXTENSION_NAME
 
-    SD_RENDERER_DEBUG("Logical Device initialisation");
+    SE_RENDERER_DEBUG("Logical Device initialisation");
     float queuePriority = 1.0f;
     std::vector<vk::DeviceQueueCreateInfo> queuesCreateInfos;
     std::set<uint32_t> indices{queueFamilyIndices.computeFamily, queueFamilyIndices.graphicsFamily};
@@ -276,7 +260,7 @@ void Renderer::initQueues() {
 }
 
 void Renderer::initSwapchain() {
-    SD_RENDERER_DEBUG("Swapchain initialisation");
+    SE_RENDERER_DEBUG("Swapchain initialisation");
 
     SwapchainDetails swapchainDetails = getSwapchainDetails(physicalDevice);
     vk::SurfaceFormatKHR surfaceFormat = getSurfaceFormat(swapchainDetails.supportedFormats);
@@ -324,7 +308,7 @@ void Renderer::initSwapchain() {
 
     swapchainImageFormat = surfaceFormat.format;
 
-//    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, device.getSwapchainImagesKHR(swapchain) == vk::Result::eSuccess, "Swapchain image creation failed.")
+//    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, device.getSwapchainImagesKHR(swapchain) == vk::Result::eSuccess, "Swapchain image creation failed.")
 
     mainDeletionQueue.push_function([=]() {
         device.destroySwapchainKHR(swapchain);
@@ -334,7 +318,7 @@ void Renderer::initSwapchain() {
 
 void Renderer::initCommandBuffers() {
 
-    SD_RENDERER_DEBUG("Command Buffer initialisation");
+    SE_RENDERER_DEBUG("Command Buffer initialisation");
 
     vk::CommandPoolCreateInfo poolInfo = {};
     poolInfo.sType = vk::StructureType::eCommandPoolCreateInfo;
@@ -360,7 +344,7 @@ void Renderer::initCommandBuffers() {
 }
 
 void Renderer::initCameraBuffers() {
-    SD_RENDERER_DEBUG("Camera uniform buffer initialisation.");
+    SE_RENDERER_DEBUG("Camera uniform buffer initialisation.");
     // init buffers
     // map buffers - they stay mapped because of persistent mapping
     // add to deletion queue
@@ -415,7 +399,7 @@ void Renderer::initCameraBuffers() {
 void Renderer::updateCameraBuffer(const CameraBuffer& camData){
     //Copy param scene cam data into frame camerabuffer
     //TODO add semaphores to make sure camera buffer is not in use before copying
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, frames.at(currentFrame).cameraBuffer.getState() == BufferState::Mapped, "Buffer is not mapped and cannot be copied into")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, frames.at(currentFrame).cameraBuffer.getState() == BufferState::Mapped, "Buffer is not mapped and cannot be copied into")
     frames.at(currentFrame).cameraBuffer.copy(&camData, sizeof(camData));
 }
 
@@ -458,7 +442,7 @@ void Renderer::initCameraDescriptors(){
 }
 
 void Renderer::initRenderPass() {
-    SD_RENDERER_DEBUG("RenderPass initialisation");
+    SE_RENDERER_DEBUG("RenderPass initialisation");
 
     vk::RenderPassCreateInfo renderPassCreateInfo = {};
     renderPassCreateInfo.sType = vk::StructureType::eRenderPassCreateInfo;
@@ -533,12 +517,12 @@ void Renderer::initRenderPass() {
     mainDeletionQueue.push_function([=]() {
         device.destroyRenderPass(renderPass);
     });
-    SD_RENDERER_DEBUG("RenderPass initialised and added to deletion queue");
+    SE_RENDERER_DEBUG("RenderPass initialised and added to deletion queue");
 }
 
 void Renderer::initFramebuffers() {
 
-    SD_RENDERER_DEBUG("Frame buffers initialisation");
+    SE_RENDERER_DEBUG("Frame buffers initialisation");
     std::vector<vk::Image> images = device.getSwapchainImagesKHR(swapchain);
 
     swapchainImagesViews.reserve(images.size());
@@ -566,12 +550,12 @@ void Renderer::initFramebuffers() {
 
         });
     }
-    SD_RENDERER_DEBUG("Frame buffers added to deletion queue");
+    SE_RENDERER_DEBUG("Frame buffers added to deletion queue");
 
 }
 
 void Renderer::createSynchronisation() {
-    SD_RENDERER_DEBUG("Semaphore and Fence initialisation");
+    SE_RENDERER_DEBUG("Semaphore and Fence initialisation");
 
     vk::FenceCreateInfo fenceCreateInfo = {};
     fenceCreateInfo.sType = vk::StructureType::eFenceCreateInfo;
@@ -593,12 +577,12 @@ void Renderer::createSynchronisation() {
             device.destroySemaphore(frames[i].presentSemaphore);
         });
     }
-    SD_RENDERER_DEBUG("Fences and Semaphores added to deletion queue");
+    SE_RENDERER_DEBUG("Fences and Semaphores added to deletion queue");
 
 }
 
 Renderer::SwapchainDetails Renderer::getSwapchainDetails(vk::PhysicalDevice pPhysicalDevice) const {
-    SD_RENDERER_DEBUG("Getting Swapchain Details");
+    SE_RENDERER_DEBUG("Getting Swapchain Details");
     SwapchainDetails swapchainDetails;
     swapchainDetails.surfaceCapabilities = pPhysicalDevice.getSurfaceCapabilitiesKHR(surface);
     swapchainDetails.supportedFormats = pPhysicalDevice.getSurfaceFormatsKHR(surface);
@@ -607,7 +591,7 @@ Renderer::SwapchainDetails Renderer::getSwapchainDetails(vk::PhysicalDevice pPhy
 }
 
 vk::SurfaceFormatKHR Renderer::getSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &formats) {
-    SD_RENDERER_DEBUG("Getting Surface Format");
+    SE_RENDERER_DEBUG("Getting Surface Format");
     if (formats.size() == 1 && formats[0].format == vk::Format::eUndefined) {
         return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
     }
@@ -622,7 +606,7 @@ vk::SurfaceFormatKHR Renderer::getSurfaceFormat(const std::vector<vk::SurfaceFor
 
 vk::PresentModeKHR
 Renderer::selectPresentationMode(const std::vector<vk::PresentModeKHR> &presentationModes, vk::PresentModeKHR mode) {
-    SD_RENDERER_DEBUG("Getting presentation mode");
+    SE_RENDERER_DEBUG("Getting presentation mode");
     for (const auto &presentationMode: presentationModes) {
         if (presentationMode == mode) {
             return presentationMode;
@@ -633,7 +617,7 @@ Renderer::selectPresentationMode(const std::vector<vk::PresentModeKHR> &presenta
 
 void Renderer::setQueueFamilyIndices() {
 
-    SD_RENDERER_DEBUG("Queues initialisation");
+    SE_RENDERER_DEBUG("Queues initialisation");
     std::vector<vk::QueueFamilyProperties> queueFamilyProperties{physicalDevice.getQueueFamilyProperties()};
 
     auto computePropertiesIterator = std::find_if(queueFamilyProperties.begin(),
@@ -654,7 +638,7 @@ void Renderer::setQueueFamilyIndices() {
     vk::Bool32 presentationSupport = false;
     presentationSupport = physicalDevice.getSurfaceSupportKHR(temp_index, surface);
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, temp_index >= 0 && presentationSupport,
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, temp_index >= 0 && presentationSupport,
                                 "Graphics and Presentation queue initialisation failed");
     queueFamilyIndices.graphicsFamily = temp_index;
     queueFamilyIndices.presentationFamily = temp_index;
@@ -662,10 +646,10 @@ void Renderer::setQueueFamilyIndices() {
 }
 
 void Renderer::initPhysicalDevice() {
-    SD_RENDERER_DEBUG("Physical Device initialisation");
+    SE_RENDERER_DEBUG("Physical Device initialisation");
     std::vector<vk::PhysicalDevice> physicalDevices{instance.enumeratePhysicalDevices()};
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !physicalDevices.empty(), "No GPU with vulkan support found")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !physicalDevices.empty(), "No GPU with vulkan support found")
 
     for (auto device: physicalDevices) {
         if (checkDeviceSuitable(device)) {
@@ -678,18 +662,19 @@ void Renderer::initPhysicalDevice() {
 }
 
 void Renderer::initSurface() {
-    SD_RENDERER_DEBUG("Surface initialisation");
+    SE_RENDERER_DEBUG("Surface initialisation");
     VkSurfaceKHR surface_temp;
 
-    if (glfwCreateWindowSurface(instance,
-                                window,
+    VkResult result = glfwCreateWindowSurface(instance,
+                                window.getWindow(),
                                 nullptr,
-                                &surface_temp) != VK_SUCCESS) {
-        throw std::runtime_error("Surface failed to initialise");
-    }
+                                &surface_temp);
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+                                result == VkResult::VK_SUCCESS,
+                                "Surface initialisation failed:");
     surface = surface_temp; //c++ wrapper type conversion: vk::SurfaceKHR contains VkSurfaceKHR address
-//    instance.destroySurfaceKHR(surface_temp);
 
+//    instance.destroySurfaceKHR(surface_temp);
     mainDeletionQueue.push_function([=]() {
         instance.destroySurfaceKHR(surface);
     });
@@ -698,15 +683,13 @@ void Renderer::initSurface() {
 }
 
 void Renderer::setSwapchainExtent(const vk::SurfaceCapabilitiesKHR &surfaceCapabilities) {
-    SD_RENDERER_DEBUG("Setting Swapchain Extent");
+    SE_RENDERER_DEBUG("Setting Swapchain Extent");
     if (surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         swapchainExtent = surfaceCapabilities.currentExtent;
     } else {
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
         VkExtent2D newExtent{};
-        newExtent.width = static_cast<uint32_t>(width);
-        newExtent.height = static_cast<uint32_t>(height);
+        newExtent.width = static_cast<uint32_t>(window.getWidth());
+        newExtent.height = static_cast<uint32_t>(window.getHeight());
 
         newExtent.width = std::max(surfaceCapabilities.minImageExtent.width,
                                    std::min(surfaceCapabilities.maxImageExtent.width, newExtent.width));
@@ -717,7 +700,7 @@ void Renderer::setSwapchainExtent(const vk::SurfaceCapabilitiesKHR &surfaceCapab
 }
 
 bool Renderer::checkInstanceExtensionSupport(const std::vector<const char *> &checkExtensions) {
-    SD_RENDERER_DEBUG("Checking extension support");
+    SE_RENDERER_DEBUG("Checking extension support");
     std::vector<vk::ExtensionProperties> extensions = vk::enumerateInstanceExtensionProperties();
 
     for (const auto &checkExtension: checkExtensions) {
@@ -729,7 +712,7 @@ bool Renderer::checkInstanceExtensionSupport(const std::vector<const char *> &ch
             }
         }
         if (!hasExtension) {
-            SD_RENDERER_ERROR("Required extension is not supported: {0}", checkExtension);
+            SE_RENDERER_ERROR("Required extension is not supported: {0}", checkExtension);
             return false;
         }
     }
@@ -811,9 +794,9 @@ void Renderer::createDepthBufferRessources(){
     depthBufferImage.depthImageView = createImageView(depthBufferImage.depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
 
     mainDeletionQueue.push_function([=]() {
-        SD_RENDERER_DEBUG("deleting depth buffer imageView");
+        SE_RENDERER_DEBUG("deleting depth buffer imageView");
     device.destroyImageView(depthBufferImage.depthImageView);
-        SD_RENDERER_DEBUG("deleting depth buffer image");
+        SE_RENDERER_DEBUG("deleting depth buffer image");
     device.destroyImage(depthBufferImage.depthImage);
     device.freeMemory(depthBufferImage.depthImageMemory);});
 
@@ -845,17 +828,14 @@ vk::Format Renderer::findSupportedFormat(const std::vector<vk::Format>& candidat
 void Renderer::cleanUp() {
     device.waitIdle();
     mainDeletionQueue.flush();
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
+    window.cleanUp();
     instance.destroy();
-    SD_RENDERER_INFO("Renderer clean up successful");
+    SE_RENDERER_INFO("Renderer clean up successful");
 
 }
 
 void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised.")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised.")
 //    //TODO make sure vertexBuffer is not being overwritten by each renderable: add offset?
 
 // Get vertices and indices size
@@ -921,7 +901,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
     vk::Result cmdAlloc = device.allocateCommandBuffers(&allocInfo, &singleUseCmd);
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, cmdAlloc == vk::Result::eSuccess, "Command Buffer allocation failed.");
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, cmdAlloc == vk::Result::eSuccess, "Command Buffer allocation failed.");
 
 
     vk::SubmitInfo submitInfo = {};
@@ -961,7 +941,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     singleUseCmd.end();
 
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
                                 graphicsQueue.submit(1,
                                                      &submitInfo,
                                                      VK_NULL_HANDLE) == vk::Result::eSuccess,
@@ -1002,7 +982,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 
     singleUseCmd.end();
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
                                 graphicsQueue.submit(1,
                                                      &submitInfo,
                                                      VK_NULL_HANDLE) == vk::Result::eSuccess,
@@ -1015,7 +995,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 
 void Renderer::initVertexBuffer() {
 
-    SD_RENDERER_DEBUG("Initialising staging buffer.");
+    SE_RENDERER_DEBUG("Initialising staging buffer.");
 //    std::vector<vk::MemoryPropertyFlagBits> stagingFlags;
 //    stagingFlags.reserve(2);
 //    stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
@@ -1027,7 +1007,7 @@ void Renderer::initVertexBuffer() {
 //    stagingBuffer.allocate(stagingMemoryTypeIndex);
 //    stagingBuffer.bind();
 
-    SD_RENDERER_DEBUG("Initialising vertex buffer.");
+    SE_RENDERER_DEBUG("Initialising vertex buffer.");
 //    std::vector<vk::MemoryPropertyFlagBits> vertexFlags;
 //    vertexFlags.reserve(1);
 //    vertexFlags.emplace_back(vk::MemoryPropertyFlagBits::eDeviceLocal);
@@ -1070,12 +1050,13 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
             return currentMemoryTypeIndex;
         }
         else{
-            SD_RENDERER_DEBUG("No matching memory types");
+            SE_RENDERER_DEBUG("No matching memory types");
         }
     }
 
     return memoryTypeIndex;
 }
+
 void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory){
     vk::ImageCreateInfo imageInfo{};
     imageInfo.sType = vk::StructureType::eImageCreateInfo;
@@ -1092,7 +1073,7 @@ void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, v
     imageInfo.samples = vk::SampleCountFlagBits::e1;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
                                 device.createImage(&imageInfo,
                                                                nullptr,
                                                                &image) == vk::Result::eSuccess,
@@ -1108,7 +1089,7 @@ void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, v
 //    allocInfo.memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits, flags);
     allocInfo.memoryTypeIndex = getMemoryTypeIndex(flags);
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,device.allocateMemory( &allocInfo, nullptr, &imageMemory) == vk::Result::eSuccess, "Failed to allocate image");
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,device.allocateMemory( &allocInfo, nullptr, &imageMemory) == vk::Result::eSuccess, "Failed to allocate image");
 
     device.bindImageMemory(image, imageMemory, 0);
 }
