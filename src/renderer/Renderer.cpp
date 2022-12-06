@@ -324,30 +324,8 @@ void Renderer::initSwapchain() {
 
     swapchainImageFormat = surfaceFormat.format;
 
+//    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, device.getSwapchainImagesKHR(swapchain) == vk::Result::eSuccess, "Swapchain image creation failed.")
 
-    /// CREATE IMAGES FOR SWAPCHAIN
-    /// These are destroyed by the destroy call on the swapchain, no need to explicitly destroy them
-    std::vector<vk::Image> images{device.getSwapchainImagesKHR(swapchain)};
-    swapchainImages.reserve(images.size());
-
-    for (vk::Image image: images) {
-        swapchainImages.emplace_back();
-        swapchainImages.back().image = image;
-        swapchainImages.back().imageView = createImageView(image,
-                                                           swapchainImageFormat,
-                                                           vk::ImageAspectFlagBits::eColor);
-
-;
-    }
-
-    SD_RENDERER_DEBUG(swapchainImages.size());
-    for(int i = 0; i < swapchainImages.size(); i++){
-        mainDeletionQueue.push_function([=]() {
-            SD_RENDERER_DEBUG("Destroying swapchain Imageview & Image");
-            device.destroyImageView(swapchainImages.at(i).imageView);
-            device.destroyImage(swapchainImages.at(i).image);
-        });
-    }
     mainDeletionQueue.push_function([=]() {
         device.destroySwapchainKHR(swapchain);
     });
@@ -561,10 +539,17 @@ void Renderer::initRenderPass() {
 void Renderer::initFramebuffers() {
 
     SD_RENDERER_DEBUG("Frame buffers initialisation");
-    swapchainFramebuffers.resize(swapchainImages.size());
+    std::vector<vk::Image> images = device.getSwapchainImagesKHR(swapchain);
 
-    for (size_t i = 0; i < swapchainImages.size(); ++i) {
-        std::array<vk::ImageView, 2> attachments = {swapchainImages[i].imageView, depthBufferImage.depthImageView};
+    swapchainImagesViews.reserve(images.size());
+    swapchainFramebuffers.resize(images.size());
+
+    for (size_t i = 0; i < images.size(); ++i) {
+        swapchainImagesViews.emplace_back(createImageView(images.at(i),
+                                                          swapchainImageFormat,
+                                                          vk::ImageAspectFlagBits::eColor));
+
+        std::array<vk::ImageView, 2> attachments = {swapchainImagesViews.at(i), depthBufferImage.depthImageView};
         vk::FramebufferCreateInfo framebufferCreateInfo = {};
         framebufferCreateInfo.sType = vk::StructureType::eFramebufferCreateInfo;
         framebufferCreateInfo.renderPass = renderPass;
@@ -573,10 +558,12 @@ void Renderer::initFramebuffers() {
         framebufferCreateInfo.width = swapchainExtent.width;
         framebufferCreateInfo.height = swapchainExtent.height;
         framebufferCreateInfo.layers = 1;
-        swapchainFramebuffers[i] = device.createFramebuffer(framebufferCreateInfo);
+        swapchainFramebuffers.at(i) = device.createFramebuffer(framebufferCreateInfo);
 
         mainDeletionQueue.push_function([=]() {
-            device.destroyFramebuffer(swapchainFramebuffers[i]);
+            device.destroyFramebuffer(swapchainFramebuffers.at(i));
+            device.destroyImageView(swapchainImagesViews.at(i));
+
         });
     }
     SD_RENDERER_DEBUG("Frame buffers added to deletion queue");
@@ -933,7 +920,9 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     beginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
     beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-    device.allocateCommandBuffers(&allocInfo, &singleUseCmd);
+    vk::Result cmdAlloc = device.allocateCommandBuffers(&allocInfo, &singleUseCmd);
+    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, cmdAlloc == vk::Result::eSuccess, "Command Buffer allocation failed.");
+
 
     vk::SubmitInfo submitInfo = {};
     submitInfo.sType = vk::StructureType::eSubmitInfo;
@@ -1087,7 +1076,7 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
 
     return memoryTypeIndex;
 }
-vk::Image Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory){
+void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory){
     vk::ImageCreateInfo imageInfo{};
     imageInfo.sType = vk::StructureType::eImageCreateInfo;
     imageInfo.imageType = vk::ImageType::e2D;

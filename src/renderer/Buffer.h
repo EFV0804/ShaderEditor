@@ -29,7 +29,7 @@ public:
      * \param pSize
      *
      */
-    Buffer(vk::BufferUsageFlags pUsage, uint64_t pSize, vk::SharingMode sharingMode);
+    Buffer(vk::BufferUsageFlags pUsage, uint32_t pSize, vk::SharingMode pSharingMode);
     Buffer() = delete;
 //    Buffer(const Buffer&) = delete;
 //    Buffer &operator=(const Buffer&) = delete;

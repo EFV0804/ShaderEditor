@@ -149,19 +149,6 @@ private:
  */
     vk::SurfaceKHR surface;
     /**
-     * Struct to store and organise the image and image view that constitute the swapchain images.
-     */
-    struct SwapchainImage {
-        vk::Image image; /**< An image :) */
-        vk::ImageView imageView; /**< A specific part of an image to be used to render. */
-    };
-    struct DepthBufferImage{
-        vk::Image depthImage;
-        vk::DeviceMemory depthImageMemory;
-        vk::ImageView depthImageView;
-    };
-    DepthBufferImage depthBufferImage;
-    /**
      * The format used for the swapchain images. Defaults to 32bits unsigned normalised.
      */
     vk::Format swapchainImageFormat{vk::Format::eB8G8R8A8Unorm};
@@ -176,7 +163,7 @@ private:
     /**
      * A vector of swapchain images, that are used as attachments for framebuffers.
      */
-    std::vector<SwapchainImage> swapchainImages;
+    std::vector<vk::ImageView> swapchainImagesViews;
     /**
      * \brief Provides information about the swapchain.
      *
@@ -189,6 +176,12 @@ private:
         std::vector<vk::SurfaceFormatKHR> supportedFormats; /**< A vector of the surface's supported formats. */
         std::vector<vk::PresentModeKHR> supportedPresentationModes; /**< A vector the surface's supported presentation modes. */
     };
+    struct DepthBufferImage{
+        vk::Image depthImage;
+        vk::DeviceMemory depthImageMemory;
+        vk::ImageView depthImageView;
+    };
+    DepthBufferImage depthBufferImage;
     /**
      * A Vulkan representation of a chosen GPU.
      */
@@ -404,5 +397,5 @@ private:
  * \return Pointer to vector element of current frame.
  */
     FrameData *getCurrentFrame() { return &frames.at(currentFrame % MAX_FRAME_DRAWS); }
-    vk::Image createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory);
+    void createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory);
 };
