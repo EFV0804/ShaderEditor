@@ -17,7 +17,7 @@ void Scene::load() {
     glm::vec3 camPos = { 0.0f, 0.0f, -2.0f};
     camBuffer.view = glm::translate(glm::mat4(1.f), camPos);
     camBuffer.proj = glm::perspective(glm::radians(70.f),
-                                      Renderer::Get().getSwapchainExtent().width / (float) Renderer::Get().getSwapchainExtent().height,
+                                      Renderer::Get().swapchain.getSwapchainExtent().width / (float) Renderer::Get().swapchain.getSwapchainExtent().height,
                                       0.1f,
                                       200.0f);
 

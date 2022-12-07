@@ -40,7 +40,8 @@ int Renderer::init() {
 
 //// DRAW
 void Renderer::draw(std::vector<Renderable> *renderables) {
-    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised, initialise before calling rendering functions")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit,
+                                "Renderer is not initialised, initialise before calling rendering functions")
 
 //******************--- START NEW FRAME ---******************//
     vk::Result result = device.waitForFences(getCurrentFrame()->renderFence, VK_TRUE, 1000000000);
@@ -51,7 +52,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
 
     uint32_t imageToBeDrawnIndex;
 
-    vk::ResultValue r = device.acquireNextImageKHR(swapchain,
+    vk::ResultValue r = device.acquireNextImageKHR(swapchain.getSwapchain(),
                                                    1000000000,
                                                    getCurrentFrame()->presentSemaphore,
                                                    VK_NULL_HANDLE);
@@ -69,7 +70,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     renderPassBeginInfo.renderPass = renderPass;
     renderPassBeginInfo.renderArea.offset.x = 0;
     renderPassBeginInfo.renderArea.offset.y = 0;
-    renderPassBeginInfo.renderArea.extent = swapchainExtent;
+    renderPassBeginInfo.renderArea.extent = swapchain.getSwapchainExtent();
     renderPassBeginInfo.framebuffer = swapchainFramebuffers.at(imageToBeDrawnIndex);
 
 //    const vk::ClearValue clearValues{
@@ -116,7 +117,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &getCurrentFrame()->renderSemaphore;
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &swapchain;
+    presentInfo.pSwapchains = &swapchain.getSwapchain();
     presentInfo.pImageIndices = &imageToBeDrawnIndex;
 
     vk::Result presentationResult = graphicsQueue.presentKHR(presentInfo);
@@ -128,17 +129,19 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
 }
 
 void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
-    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit, "Renderer is not initialised, initialise before calling rendering functions")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, isInit,
+                                "Renderer is not initialised, initialise before calling rendering functions")
     //TODO bind vertexBuffer here and add counter to multiply Vertex.size()*count to offset vertexBuffer binding
 
-    const Material* lastMaterial = nullptr;
+    const Material *lastMaterial = nullptr;
 
-    for(int i = 0; i < renderables->size(); i++){
-        const Material* current_mat = renderables->at(i).getMaterial();
+    for (int i = 0; i < renderables->size(); i++) {
+        const Material *current_mat = renderables->at(i).getMaterial();
 
-        if(current_mat != lastMaterial){
+        if (current_mat != lastMaterial) {
 //            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
-            getCurrentFrame()->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, current_mat->pipeline.getPipeline());
+            getCurrentFrame()->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
+                                                          current_mat->pipeline.getPipeline());
             //TODO add semaphores to make sure camera buffer is not in use before copying or are frame semaphores enough?
             getCurrentFrame()->commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
                                                                 current_mat->pipeline.getLayout(),
@@ -152,7 +155,7 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
         VkDeviceSize offset = 0;
 
         //Push constants
-        for(auto constant : renderables->at(i).getMaterial()->getPushConstants()){
+        for (auto constant: renderables->at(i).getMaterial()->getPushConstants()) {
             getCurrentFrame()->commandBuffer.pushConstants(
                     renderables->at(i).getMaterial()->pipeline.getLayout(),
                     constant.stageFlags,
@@ -164,7 +167,8 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
         getCurrentFrame()->commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
         getCurrentFrame()->commandBuffer.bindIndexBuffer(indexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
 //        getCurrentFrame()->commandBuffer.draw(renderables->at(i).getMesh()->vertices.size(), 1, 0,0);
-        getCurrentFrame()->commandBuffer.drawIndexed(static_cast<uint32_t>(renderables->at(i).getMesh()->indices.size()), 1, 0,0,0);
+        getCurrentFrame()->commandBuffer.drawIndexed(
+                static_cast<uint32_t>(renderables->at(i).getMesh()->indices.size()), 1, 0, 0, 0);
 
     }
 }
@@ -260,60 +264,10 @@ void Renderer::initQueues() {
 }
 
 void Renderer::initSwapchain() {
-    SE_RENDERER_DEBUG("Swapchain initialisation");
-
-    SwapchainDetails swapchainDetails = getSwapchainDetails(physicalDevice);
-    vk::SurfaceFormatKHR surfaceFormat = getSurfaceFormat(swapchainDetails.supportedFormats);
-    vk::PresentModeKHR presentationMode = selectPresentationMode(swapchainDetails.supportedPresentationModes,
-                                                                 vk::PresentModeKHR::eMailbox);
-    setSwapchainExtent(swapchainDetails.surfaceCapabilities);
-
-    vk::SwapchainCreateInfoKHR swapchainCreateInfo = {};
-    swapchainCreateInfo.sType = vk::StructureType::eSwapchainCreateInfoKHR;
-    swapchainCreateInfo.surface = surface;
-    swapchainCreateInfo.imageFormat = surfaceFormat.format;
-    swapchainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
-    swapchainCreateInfo.presentMode = presentationMode;
-    swapchainCreateInfo.imageExtent = swapchainExtent;
-
-    uint32_t imageCount = swapchainDetails.surfaceCapabilities.minImageCount + 1;
-    if (swapchainDetails.surfaceCapabilities.maxImageCount > 0
-        && swapchainDetails.surfaceCapabilities.maxImageCount < imageCount) {
-        imageCount = swapchainDetails.surfaceCapabilities.maxImageCount;
-    }
-    swapchainCreateInfo.minImageCount = imageCount;
-
-    swapchainCreateInfo.imageArrayLayers = 1;
-    swapchainCreateInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-    swapchainCreateInfo.preTransform = swapchainDetails.surfaceCapabilities.currentTransform;
-    swapchainCreateInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    swapchainCreateInfo.clipped = VK_TRUE;
-
-    if (queueFamilyIndices.graphicsFamily != queueFamilyIndices.presentationFamily) {
-        uint32_t queueFamilyIndicesArr[]{queueFamilyIndices.graphicsFamily,
-                                         queueFamilyIndices.presentationFamily};
-        swapchainCreateInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-        swapchainCreateInfo.queueFamilyIndexCount = 2;
-        swapchainCreateInfo.pQueueFamilyIndices = queueFamilyIndicesArr;
-    } else {
-        swapchainCreateInfo.imageSharingMode = vk::SharingMode::eExclusive;
-        swapchainCreateInfo.queueFamilyIndexCount = 0;
-        swapchainCreateInfo.pQueueFamilyIndices = nullptr;
-    }
-
-    swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
-
-    swapchain = device.createSwapchainKHR(swapchainCreateInfo);
-
-
-    swapchainImageFormat = surfaceFormat.format;
-
-//    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, device.getSwapchainImagesKHR(swapchain) == vk::Result::eSuccess, "Swapchain image creation failed.")
-
+    swapchain.init();
     mainDeletionQueue.push_function([=]() {
-        device.destroySwapchainKHR(swapchain);
+        swapchain.cleanUp();
     });
-
 }
 
 void Renderer::initCommandBuffers() {
@@ -353,7 +307,7 @@ void Renderer::initCameraBuffers() {
     flags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
     flags.emplace_back(vk::MemoryPropertyFlagBits::eHostCoherent);
 
-    for(int i = 0; i < MAX_FRAME_DRAWS; i++){
+    for (int i = 0; i < MAX_FRAME_DRAWS; i++) {
         frames.at(i).cameraBuffer.init(queueFamilyIndices.graphicsFamily);
         frames.at(i).cameraBuffer.allocate(getMemoryTypeIndex(flags));
         frames.at(i).cameraBuffer.bind();
@@ -366,7 +320,7 @@ void Renderer::initCameraBuffers() {
         });
 
         // Allocate Camera Descriptor
-        vk::DescriptorSetAllocateInfo allocInfo ={};
+        vk::DescriptorSetAllocateInfo allocInfo = {};
         allocInfo.pNext = nullptr;
         allocInfo.sType = vk::StructureType::eDescriptorSetAllocateInfo;
         allocInfo.descriptorPool = descriptorPool;
@@ -396,14 +350,15 @@ void Renderer::initCameraBuffers() {
     }
 }
 
-void Renderer::updateCameraBuffer(const CameraBuffer& camData){
+void Renderer::updateCameraBuffer(const CameraBuffer &camData) {
     //Copy param scene cam data into frame camerabuffer
     //TODO add semaphores to make sure camera buffer is not in use before copying
-    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, frames.at(currentFrame).cameraBuffer.getState() == BufferState::Mapped, "Buffer is not mapped and cannot be copied into")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, frames.at(currentFrame).cameraBuffer.getState() == BufferState::Mapped,
+                                "Buffer is not mapped and cannot be copied into")
     frames.at(currentFrame).cameraBuffer.copy(&camData, sizeof(camData));
 }
 
-void Renderer::initCameraDescriptors(){
+void Renderer::initCameraDescriptors() {
     // Descriptor set
     cameraDescriptorBinding.binding = 0;
     cameraDescriptorBinding.descriptorCount = 1;
@@ -421,13 +376,13 @@ void Renderer::initCameraDescriptors(){
 
     std::vector<vk::DescriptorPoolSize> sizes =
             {
-                    { vk::DescriptorType::eUniformBuffer, 10 }
+                    {vk::DescriptorType::eUniformBuffer, 10}
             };
 
     vk::DescriptorPoolCreateInfo descriptorPoolInfo = {};
     descriptorPoolInfo.sType = vk::StructureType::eDescriptorPoolCreateInfo;
     descriptorPoolInfo.maxSets = 10;
-    descriptorPoolInfo.poolSizeCount = (uint32_t)sizes.size();
+    descriptorPoolInfo.poolSizeCount = (uint32_t) sizes.size();
     descriptorPoolInfo.pPoolSizes = sizes.data();
 //    descriptorPoolInfo.flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
 
@@ -451,7 +406,7 @@ void Renderer::initRenderPass() {
 
 
     vk::AttachmentDescription colorAttachment{};
-    colorAttachment.format = swapchainImageFormat;
+    colorAttachment.format = swapchain.getSwapchainImageFormat();
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
     colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
     colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
@@ -494,18 +449,22 @@ void Renderer::initRenderPass() {
     std::array<vk::SubpassDependency, 2> subpassDependencies;
 //color
     subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    subpassDependencies[0].srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe | vk::PipelineStageFlagBits::eEarlyFragmentTests;
+    subpassDependencies[0].srcStageMask =
+            vk::PipelineStageFlagBits::eBottomOfPipe | vk::PipelineStageFlagBits::eEarlyFragmentTests;
     subpassDependencies[0].srcAccessMask = vk::AccessFlagBits::eMemoryRead;
     subpassDependencies[0].dstSubpass = 0;
-    subpassDependencies[0].dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
+    subpassDependencies[0].dstStageMask =
+            vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
     subpassDependencies[0].dstAccessMask = vk::AccessFlagBits::eMemoryRead | vk::AccessFlagBits::eMemoryWrite;
     subpassDependencies[0].dependencyFlags = vk::DependencyFlagBits::eDeviceGroup;
 //depth
     subpassDependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
     subpassDependencies[1].dstSubpass = 0;
-    subpassDependencies[1].srcStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+    subpassDependencies[1].srcStageMask =
+            vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
     subpassDependencies[1].srcAccessMask = vk::AccessFlagBits::eNone;
-    subpassDependencies[1].dstStageMask = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+    subpassDependencies[1].dstStageMask =
+            vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
     subpassDependencies[1].dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
     subpassDependencies[1].dependencyFlags = vk::DependencyFlagBits::eDeviceGroup;
     renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(subpassDependencies.size());
@@ -523,14 +482,14 @@ void Renderer::initRenderPass() {
 void Renderer::initFramebuffers() {
 
     SE_RENDERER_DEBUG("Frame buffers initialisation");
-    std::vector<vk::Image> images = device.getSwapchainImagesKHR(swapchain);
+    std::vector<vk::Image> images = device.getSwapchainImagesKHR(swapchain.getSwapchain());
 
     swapchainImagesViews.reserve(images.size());
     swapchainFramebuffers.resize(images.size());
 
     for (size_t i = 0; i < images.size(); ++i) {
         swapchainImagesViews.emplace_back(createImageView(images.at(i),
-                                                          swapchainImageFormat,
+                                                          swapchain.getSwapchainImageFormat(),
                                                           vk::ImageAspectFlagBits::eColor));
 
         std::array<vk::ImageView, 2> attachments = {swapchainImagesViews.at(i), depthBufferImage.depthImageView};
@@ -539,8 +498,8 @@ void Renderer::initFramebuffers() {
         framebufferCreateInfo.renderPass = renderPass;
         framebufferCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         framebufferCreateInfo.pAttachments = attachments.data();
-        framebufferCreateInfo.width = swapchainExtent.width;
-        framebufferCreateInfo.height = swapchainExtent.height;
+        framebufferCreateInfo.width = swapchain.getSwapchainExtent().width;
+        framebufferCreateInfo.height = swapchain.getSwapchainExtent().height;
         framebufferCreateInfo.layers = 1;
         swapchainFramebuffers.at(i) = device.createFramebuffer(framebufferCreateInfo);
 
@@ -579,40 +538,6 @@ void Renderer::createSynchronisation() {
     }
     SE_RENDERER_DEBUG("Fences and Semaphores added to deletion queue");
 
-}
-
-Renderer::SwapchainDetails Renderer::getSwapchainDetails(vk::PhysicalDevice pPhysicalDevice) const {
-    SE_RENDERER_DEBUG("Getting Swapchain Details");
-    SwapchainDetails swapchainDetails;
-    swapchainDetails.surfaceCapabilities = pPhysicalDevice.getSurfaceCapabilitiesKHR(surface);
-    swapchainDetails.supportedFormats = pPhysicalDevice.getSurfaceFormatsKHR(surface);
-    swapchainDetails.supportedPresentationModes = pPhysicalDevice.getSurfacePresentModesKHR(surface);
-    return swapchainDetails;
-}
-
-vk::SurfaceFormatKHR Renderer::getSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &formats) {
-    SE_RENDERER_DEBUG("Getting Surface Format");
-    if (formats.size() == 1 && formats[0].format == vk::Format::eUndefined) {
-        return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
-    }
-    for (auto &format: formats) {
-        if (format.format == vk::Format::eB8G8R8A8Unorm && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
-            return format;
-        }
-    }
-
-    return formats[0];
-}
-
-vk::PresentModeKHR
-Renderer::selectPresentationMode(const std::vector<vk::PresentModeKHR> &presentationModes, vk::PresentModeKHR mode) {
-    SE_RENDERER_DEBUG("Getting presentation mode");
-    for (const auto &presentationMode: presentationModes) {
-        if (presentationMode == mode) {
-            return presentationMode;
-        }
-    }
-    return vk::PresentModeKHR::eFifo;
 }
 
 void Renderer::setQueueFamilyIndices() {
@@ -658,7 +583,7 @@ void Renderer::initPhysicalDevice() {
 
         }
     }
-
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !physicalDevice == NULL, "No suitable devices found")
 }
 
 void Renderer::initSurface() {
@@ -666,37 +591,17 @@ void Renderer::initSurface() {
     VkSurfaceKHR surface_temp;
 
     VkResult result = glfwCreateWindowSurface(instance,
-                                window.getWindow(),
-                                nullptr,
-                                &surface_temp);
+                                              window.getWindow(),
+                                              nullptr,
+                                              &surface_temp);
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
                                 result == VkResult::VK_SUCCESS,
                                 "Surface initialisation failed:");
     surface = surface_temp; //c++ wrapper type conversion: vk::SurfaceKHR contains VkSurfaceKHR address
 
-//    instance.destroySurfaceKHR(surface_temp);
     mainDeletionQueue.push_function([=]() {
         instance.destroySurfaceKHR(surface);
     });
-
-
-}
-
-void Renderer::setSwapchainExtent(const vk::SurfaceCapabilitiesKHR &surfaceCapabilities) {
-    SE_RENDERER_DEBUG("Setting Swapchain Extent");
-    if (surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-        swapchainExtent = surfaceCapabilities.currentExtent;
-    } else {
-        VkExtent2D newExtent{};
-        newExtent.width = static_cast<uint32_t>(window.getWidth());
-        newExtent.height = static_cast<uint32_t>(window.getHeight());
-
-        newExtent.width = std::max(surfaceCapabilities.minImageExtent.width,
-                                   std::min(surfaceCapabilities.maxImageExtent.width, newExtent.width));
-        newExtent.height = std::max(surfaceCapabilities.minImageExtent.height,
-                                    std::min(surfaceCapabilities.maxImageExtent.height, newExtent.height));
-        swapchainExtent = newExtent;
-    }
 }
 
 bool Renderer::checkInstanceExtensionSupport(const std::vector<const char *> &checkExtensions) {
@@ -747,9 +652,13 @@ bool Renderer::checkDeviceSuitable(vk::PhysicalDevice pPhysicalDevice) {
     bool swapchainValid = false;
 
     if (extensionsSupported) {
-        SwapchainDetails swapchainDetails = getSwapchainDetails(pPhysicalDevice);
+        SwapchainDetails tempSwapchainDetails;
+        tempSwapchainDetails.surfaceCapabilities = pPhysicalDevice.getSurfaceCapabilitiesKHR(surface);
+        tempSwapchainDetails.supportedFormats = pPhysicalDevice.getSurfaceFormatsKHR(surface);
+        tempSwapchainDetails.supportedPresentationModes = pPhysicalDevice.getSurfacePresentModesKHR(surface);
         swapchainValid =
-                !swapchainDetails.supportedPresentationModes.empty() && !swapchainDetails.supportedFormats.empty();
+                !tempSwapchainDetails.supportedPresentationModes.empty() &&
+                !tempSwapchainDetails.supportedFormats.empty();
     }
 
     return queueFamilyIndices.isValid() && extensionsSupported && swapchainValid;
@@ -781,26 +690,30 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
 
     return imageView;
 }
-void Renderer::createDepthBufferRessources(){
+
+void Renderer::createDepthBufferRessources() {
     vk::Format depthFormat = findDepthFormat();
-    createImage(swapchainExtent.width,
-                swapchainExtent.height,
+    createImage(swapchain.getSwapchainExtent().width,
+                swapchain.getSwapchainExtent().height,
                 depthFormat,
                 vk::ImageTiling::eOptimal,
                 vk::ImageUsageFlagBits::eDepthStencilAttachment,
                 vk::MemoryPropertyFlagBits::eDeviceLocal,
                 depthBufferImage.depthImage,
                 depthBufferImage.depthImageMemory);
-    depthBufferImage.depthImageView = createImageView(depthBufferImage.depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
+    depthBufferImage.depthImageView = createImageView(depthBufferImage.depthImage, depthFormat,
+                                                      vk::ImageAspectFlagBits::eDepth);
 
     mainDeletionQueue.push_function([=]() {
         SE_RENDERER_DEBUG("deleting depth buffer imageView");
-    device.destroyImageView(depthBufferImage.depthImageView);
+        device.destroyImageView(depthBufferImage.depthImageView);
         SE_RENDERER_DEBUG("deleting depth buffer image");
-    device.destroyImage(depthBufferImage.depthImage);
-    device.freeMemory(depthBufferImage.depthImageMemory);});
+        device.destroyImage(depthBufferImage.depthImage);
+        device.freeMemory(depthBufferImage.depthImageMemory);
+    });
 
 }
+
 vk::Format Renderer::findDepthFormat() {
     return findSupportedFormat(
             {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
@@ -808,11 +721,14 @@ vk::Format Renderer::findDepthFormat() {
             vk::FormatFeatureFlagBits::eDepthStencilAttachment
     );
 }
+
 bool Renderer::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
-vk::Format Renderer::findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features){
-    for (vk::Format format : candidates) {
+
+vk::Format Renderer::findSupportedFormat(const std::vector<vk::Format> &candidates, vk::ImageTiling tiling,
+                                         vk::FormatFeatureFlags features) {
+    for (vk::Format format: candidates) {
         vk::FormatProperties props;
         physicalDevice.getFormatProperties(format, &props);
 
@@ -825,6 +741,7 @@ vk::Format Renderer::findSupportedFormat(const std::vector<vk::Format>& candidat
 
     throw std::runtime_error("failed to find supported format!");
 }
+
 void Renderer::cleanUp() {
     device.waitIdle();
     mainDeletionQueue.flush();
@@ -855,20 +772,20 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 // 1. Vertices
 //      a.copy vertices to staging buffer
 //      b.Region copy staging buffer to vertexBuffer
-            //cmd record begin
-            //region copy
-            //cmd record end
-            //submit
-            // free cmd buffer
+    //cmd record begin
+    //region copy
+    //cmd record end
+    //submit
+    // free cmd buffer
 
     //Indices size && vertices size
 
 
-    for(int i = 0; i < renderables->size(); i++){
-        for(auto& index :renderables->at(i).getMesh()->indices ){
+    for (int i = 0; i < renderables->size(); i++) {
+        for (auto &index: renderables->at(i).getMesh()->indices) {
             indices.push_back(index);
         }
-        for(auto& vertex : renderables->at(i).getMesh()->vertices){
+        for (auto &vertex: renderables->at(i).getMesh()->vertices) {
             vertices.push_back(vertex);
         }
 
@@ -918,15 +835,15 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     stagingBuffer.copy(indices.data(), indexDeviceSize);
     stagingBuffer.unMap();
     // Copy indices from staging buffer to index buffer
-        // Init index buffer
+    // Init index buffer
     std::vector<vk::MemoryPropertyFlagBits> flags;
     flags.push_back(vk::MemoryPropertyFlagBits::eHostCoherent);
     flags.push_back(vk::MemoryPropertyFlagBits::eHostVisible);
     initIndexBuffer(flags, indexDeviceSize, indices);
 
 
-        // Copy to index buffer
-    vk::BufferCopy indexCopyRegion  = {};
+    // Copy to index buffer
+    vk::BufferCopy indexCopyRegion = {};
     indexCopyRegion.srcOffset = 0;
     indexCopyRegion.dstOffset = 0;
     indexCopyRegion.size = indexBuffer.getSize();
@@ -970,7 +887,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 
     singleUseCmd.begin(beginInfo);
 
-    vk::BufferCopy vertexCopyRegion  = {};
+    vk::BufferCopy vertexCopyRegion = {};
     vertexCopyRegion.srcOffset = 0;
     vertexCopyRegion.dstOffset = 0;
     vertexCopyRegion.size = vertexDeviceSize;
@@ -1014,12 +931,12 @@ void Renderer::initVertexBuffer() {
 //
 //    uint32_t vertexMemoryTypeIndex = getMemoryTypeIndex(vertexFlags);
 //    vertexBuffer.init(queueFamilyIndices.graphicsFamily);
-    mainDeletionQueue.push_function([=]() {stagingBuffer.destroy();});
-    mainDeletionQueue.push_function([=]() {vertexBuffer.destroy();});
-
+    mainDeletionQueue.push_function([=]() { stagingBuffer.destroy(); });
+    mainDeletionQueue.push_function([=]() { vertexBuffer.destroy(); });
 
 
 }
+
 void Renderer::initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size,
                                std::vector<uint32_t> indices) {
 
@@ -1029,11 +946,11 @@ void Renderer::initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk
     indexBuffer.init(queueFamilyIndices.graphicsFamily);
     indexBuffer.allocate(indexMemoryTypeIndex);
     indexBuffer.bind();
-    mainDeletionQueue.push_function([=]() {indexBuffer.destroy();});
+    mainDeletionQueue.push_function([=]() { indexBuffer.destroy(); });
 
 }
 
-uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBits>& flags) {
+uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBits> &flags) {
 
     vk::PhysicalDeviceMemoryProperties memoryProperties = physicalDevice.getMemoryProperties();
 
@@ -1042,14 +959,12 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
 
 
     for (uint32_t currentMemoryTypeIndex = 0;
-         currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex)
-    {
+         currentMemoryTypeIndex < memoryProperties.memoryTypeCount; ++currentMemoryTypeIndex) {
         vk::MemoryType memoryType = memoryProperties.memoryTypes[currentMemoryTypeIndex];
-        if(std::all_of(flags.begin(), flags.end(), [&memoryType](vk::MemoryPropertyFlagBits flag){return flag & memoryType.propertyFlags;}))
-        {
+        if (std::all_of(flags.begin(), flags.end(),
+                        [&memoryType](vk::MemoryPropertyFlagBits flag) { return flag & memoryType.propertyFlags; })) {
             return currentMemoryTypeIndex;
-        }
-        else{
+        } else {
             SE_RENDERER_DEBUG("No matching memory types");
         }
     }
@@ -1057,7 +972,9 @@ uint32_t Renderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlagBi
     return memoryTypeIndex;
 }
 
-void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image& image, vk::DeviceMemory& imageMemory){
+void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling,
+                           vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image &image,
+                           vk::DeviceMemory &imageMemory) {
     vk::ImageCreateInfo imageInfo{};
     imageInfo.sType = vk::StructureType::eImageCreateInfo;
     imageInfo.imageType = vk::ImageType::e2D;
@@ -1075,9 +992,9 @@ void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, v
 
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
                                 device.createImage(&imageInfo,
-                                                               nullptr,
-                                                               &image) == vk::Result::eSuccess,
-                                 "Failed to create image")
+                                                   nullptr,
+                                                   &image) == vk::Result::eSuccess,
+                                "Failed to create image")
 
     vk::MemoryRequirements memRequirements;
     device.getImageMemoryRequirements(image, &memRequirements);
@@ -1089,7 +1006,9 @@ void Renderer::createImage(uint32_t width, uint32_t height, vk::Format format, v
 //    allocInfo.memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits, flags);
     allocInfo.memoryTypeIndex = getMemoryTypeIndex(flags);
 
-    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,device.allocateMemory( &allocInfo, nullptr, &imageMemory) == vk::Result::eSuccess, "Failed to allocate image");
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+                                device.allocateMemory(&allocInfo, nullptr, &imageMemory) == vk::Result::eSuccess,
+                                "Failed to allocate image");
 
     device.bindImageMemory(image, imageMemory, 0);
 }
