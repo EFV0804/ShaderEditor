@@ -15,7 +15,7 @@
 #include "Window.h"
 #include "Swapchain.h"
 #include "RenderPass.h"
-
+#include "CommandBuffer.h"
 //#include "VkUtilities.h"
 
 class Renderable;
@@ -215,7 +215,7 @@ private:
         vk::Semaphore renderSemaphore;    /**< Signals when frame is ready to be rendered */
         vk::Fence renderFence;            /**< Signals when frame has been submitted to graphics queue. */
         vk::CommandPool commandPool;      /**< A pool associated with specific queue family, from which command buffers are allocated. */
-        vk::CommandBuffer commandBuffer;  /**< Buffer where commands are recorded before being submitted to the queue.*/
+        CommandBuffer commandBuffer;  /**< Buffer where commands are recorded before being submitted to the queue.*/
         Buffer cameraBuffer{vk::BufferUsageFlagBits::eUniformBuffer, 50000,
                             vk::SharingMode::eExclusive}; /**< Uniform buffer containing proj view matrices and camera position */
         vk::DescriptorSet cameraDescriptorSet;

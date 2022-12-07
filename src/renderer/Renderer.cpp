@@ -59,19 +59,20 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     imageToBeDrawnIndex = r.value;
 
 //***************--- BEGIN COMMAND BUFFER---**********µ*******//
-    vk::CommandBufferBeginInfo commandBufferBeginInfo{};
-    commandBufferBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
-    commandBufferBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-    getCurrentFrame()->commandBuffer.begin(commandBufferBeginInfo);
+//    vk::CommandBufferBeginInfo commandBufferBeginInfo{};
+//    commandBufferBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
+//    commandBufferBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+//    getCurrentFrame()->commandBuffer.begin(commandBufferBeginInfo);
 
+    getCurrentFrame()->commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 //***************--- RENDER PASS BEGINS ---**********µ*******//
-    renderpass.begin(imageToBeDrawnIndex, getCurrentFrame()->commandBuffer);
+    renderpass.begin(imageToBeDrawnIndex, getCurrentFrame()->commandBuffer.getCommandBuffer());
 
 //******************--- DRAW OBJECTS ---********************//
     drawRenderables(renderables);
 
 //******************--- RENDER PASS ENDS ---*****************//
-    renderpass.end(getCurrentFrame()->commandBuffer);
+    renderpass.end(getCurrentFrame()->commandBuffer.getCommandBuffer());
 
 //******************--- END COMMAND BUFFER ---**************//
     getCurrentFrame()->commandBuffer.end();
@@ -85,7 +86,7 @@ void Renderer::draw(std::vector<Renderable> *renderables) {
     submitInfo.pWaitSemaphores = &getCurrentFrame()->presentSemaphore;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &getCurrentFrame()->commandBuffer;
+    submitInfo.pCommandBuffers = &getCurrentFrame()->commandBuffer.getCommandBuffer();
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &getCurrentFrame()->renderSemaphore;
 
@@ -120,23 +121,23 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
 
         if (current_mat != lastMaterial) {
 //            vk::Pipeline& pipeline = renderable.material->pipeline.getPipeline();
-            getCurrentFrame()->commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                                                          current_mat->pipeline.getPipeline());
+            getCurrentFrame()->commandBuffer.getCommandBuffer().bindPipeline(vk::PipelineBindPoint::eGraphics,
+                                                                             current_mat->pipeline.getPipeline());
             //TODO add semaphores to make sure camera buffer is not in use before copying or are frame semaphores enough?
-            getCurrentFrame()->commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                                                current_mat->pipeline.getLayout(),
-                                                                0,
-                                                                1,
-                                                                &getCurrentFrame()->cameraDescriptorSet,
-                                                                0,
-                                                                nullptr);
+            getCurrentFrame()->commandBuffer.getCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+                                                                                   current_mat->pipeline.getLayout(),
+                                                                                   0,
+                                                                                   1,
+                                                                                   &getCurrentFrame()->cameraDescriptorSet,
+                                                                                   0,
+                                                                                   nullptr);
             lastMaterial = current_mat;
         }
         VkDeviceSize offset = 0;
 
         //Push constants
         for (auto constant: renderables->at(i).getMaterial()->getPushConstants()) {
-            getCurrentFrame()->commandBuffer.pushConstants(
+            getCurrentFrame()->commandBuffer.getCommandBuffer().pushConstants(
                     renderables->at(i).getMaterial()->pipeline.getLayout(),
                     constant.stageFlags,
                     constant.offset,
@@ -144,9 +145,10 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
                     &renderables->at(i).transform);
         }
 
-        getCurrentFrame()->commandBuffer.bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
-        getCurrentFrame()->commandBuffer.bindIndexBuffer(indexBuffer.getBuffer(), 0, vk::IndexType::eUint32);
-        getCurrentFrame()->commandBuffer.drawIndexed(
+        getCurrentFrame()->commandBuffer.getCommandBuffer().bindVertexBuffers(0, 1, &vertexBuffer.getBuffer(), &offset);
+        getCurrentFrame()->commandBuffer.getCommandBuffer().bindIndexBuffer(indexBuffer.getBuffer(), 0,
+                                                                            vk::IndexType::eUint32);
+        getCurrentFrame()->commandBuffer.getCommandBuffer().drawIndexed(
                 static_cast<uint32_t>(renderables->at(i).getMesh()->indices.size()), 1, 0, 0, 0);
 
     }
@@ -263,14 +265,13 @@ void Renderer::initCommandBuffers() {
     for (int i = 0; i < MAX_FRAME_DRAWS; i++) {
         frames.emplace_back();
         frames.back().commandPool = device.createCommandPool(poolInfo);
-        vk::CommandBufferAllocateInfo commandBufferAllocInfo = {};
-        commandBufferAllocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
-        commandBufferAllocInfo.commandPool = frames.back().commandPool;
-        commandBufferAllocInfo.commandBufferCount = 1;
-        commandBufferAllocInfo.level = vk::CommandBufferLevel::ePrimary;
-        frames.back().commandBuffer = device.allocateCommandBuffers(commandBufferAllocInfo).at(0);
+
+
+        frames.back().commandBuffer.allocate(frames.back().commandPool, true);
+
         mainDeletionQueue.push_function([=]() {
             device.destroyCommandPool(frames[i].commandPool);
+            frames.at(i).commandBuffer.cleanUp();
         });
 
     }
@@ -380,41 +381,6 @@ void Renderer::initRenderPass() {
     renderpass.initFramebuffers();
     mainDeletionQueue.push_function([=]() { renderpass.cleanUp(); });
 }
-
-//void Renderer::initFramebuffers() {
-
-//    SE_RENDERER_DEBUG("Frame buffers initialisation");
-//    std::vector<vk::Image> images = device.getSwapchainImagesKHR(swapchain.getSwapchain());
-//
-//    swapchainImagesViews.reserve(images.size());
-//    swapchainFramebuffers.resize(images.size());
-//
-//    for (size_t i = 0; i < images.size(); ++i) {
-//        swapchainImagesViews.emplace_back(createImageView(images.at(i),
-//                                                          swapchain.getSwapchainImageFormat(),
-//                                                          vk::ImageAspectFlagBits::eColor));
-//
-//        std::array<vk::ImageView, 2> attachments = {swapchainImagesViews.at(i), depthBufferImage.depthImageView};
-//
-//        vk::FramebufferCreateInfo framebufferCreateInfo = {};
-//        framebufferCreateInfo.sType = vk::StructureType::eFramebufferCreateInfo;
-//        framebufferCreateInfo.renderPass = renderPass;
-//        framebufferCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-//        framebufferCreateInfo.pAttachments = attachments.data();
-//        framebufferCreateInfo.width = swapchain.getSwapchainExtent().width;
-//        framebufferCreateInfo.height = swapchain.getSwapchainExtent().height;
-//        framebufferCreateInfo.layers = 1;
-//        swapchainFramebuffers.at(i) = device.createFramebuffer(framebufferCreateInfo);
-//
-//        mainDeletionQueue.push_function([=]() {
-//            device.destroyFramebuffer(swapchainFramebuffers.at(i));
-//            device.destroyImageView(swapchainImagesViews.at(i));
-//
-//        });
-//    }
-//    SE_RENDERER_DEBUG("Frame buffers added to deletion queue");
-
-//}
 
 void Renderer::createSynchronisation() {
     SE_RENDERER_DEBUG("Semaphore and Fence initialisation");
@@ -594,36 +560,6 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
     return imageView;
 }
 
-//void Renderer::createDepthBufferResources() {
-//    vk::Format depthFormat = findDepthFormat();
-//    createImage(swapchain.getSwapchainExtent().width,
-//                swapchain.getSwapchainExtent().height,
-//                depthFormat,
-//                vk::ImageTiling::eOptimal,
-//                vk::ImageUsageFlagBits::eDepthStencilAttachment,
-//                vk::MemoryPropertyFlagBits::eDeviceLocal,
-//                depthBufferImage.depthImage,
-//                depthBufferImage.depthImageMemory);
-//    depthBufferImage.depthImageView = createImageView(depthBufferImage.depthImage, depthFormat,
-//                                                      vk::ImageAspectFlagBits::eDepth);
-//
-//    mainDeletionQueue.push_function([=]() {
-//        SE_RENDERER_DEBUG("deleting depth buffer imageView");
-//        device.destroyImageView(depthBufferImage.depthImageView);
-//        SE_RENDERER_DEBUG("deleting depth buffer image");
-//        device.destroyImage(depthBufferImage.depthImage);
-//        device.freeMemory(depthBufferImage.depthImageMemory);
-//    });
-//
-//}
-
-//vk::Format Renderer::findDepthFormat() {
-//    return findSupportedFormat(
-//            {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
-//            vk::ImageTiling::eOptimal,
-//            vk::FormatFeatureFlagBits::eDepthStencilAttachment
-//    );
-//}
 
 bool Renderer::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
@@ -707,27 +643,14 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     stagingBuffer.allocate(stagingMemoryTypeIndex);
     stagingBuffer.bind();
 
-    //get buffer allocation info + allocate cmd buffer
-    vk::CommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType = vk::StructureType::eCommandBufferAllocateInfo;
-    allocInfo.level = vk::CommandBufferLevel::ePrimary;
-    allocInfo.commandPool = getCurrentFrame()->commandPool;
-    allocInfo.commandBufferCount = 1;
-
-    //Single use command buffer
-    vk::CommandBuffer singleUseCmd;
-    vk::CommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
-    beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-
-    vk::Result cmdAlloc = device.allocateCommandBuffers(&allocInfo, &singleUseCmd);
-    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, cmdAlloc == vk::Result::eSuccess, "Command Buffer allocation failed.");
+    CommandBuffer singleUseCmd;
+    singleUseCmd.allocate(getCurrentFrame()->commandPool, true);
 
 
     vk::SubmitInfo submitInfo = {};
     submitInfo.sType = vk::StructureType::eSubmitInfo;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &singleUseCmd;
+    submitInfo.pCommandBuffers = &singleUseCmd.getCommandBuffer();
 
 
     //---------------------------------//
@@ -751,12 +674,12 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     indexCopyRegion.dstOffset = 0;
     indexCopyRegion.size = indexBuffer.getSize();
 
-    singleUseCmd.begin(beginInfo);
+    singleUseCmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-    singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
-                            indexBuffer.getBuffer(),
-                            1,
-                            &indexCopyRegion);
+    singleUseCmd.getCommandBuffer().copyBuffer(stagingBuffer.getBuffer(),
+                                               indexBuffer.getBuffer(),
+                                               1,
+                                               &indexCopyRegion);
 
     singleUseCmd.end();
 
@@ -788,17 +711,17 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     stagingBuffer.unMap();
 
 
-    singleUseCmd.begin(beginInfo);
+    singleUseCmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
     vk::BufferCopy vertexCopyRegion = {};
     vertexCopyRegion.srcOffset = 0;
     vertexCopyRegion.dstOffset = 0;
     vertexCopyRegion.size = vertexDeviceSize;
 
-    singleUseCmd.copyBuffer(stagingBuffer.getBuffer(),
-                            vertexBuffer.getBuffer(),
-                            1,
-                            &vertexCopyRegion);
+    singleUseCmd.getCommandBuffer().copyBuffer(stagingBuffer.getBuffer(),
+                                               vertexBuffer.getBuffer(),
+                                               1,
+                                               &vertexCopyRegion);
 
     singleUseCmd.end();
 
@@ -810,7 +733,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     graphicsQueue.waitIdle();
     device.freeCommandBuffers(getCurrentFrame()->commandPool,
                               1,
-                              &singleUseCmd);
+                              &singleUseCmd.getCommandBuffer());
 }
 
 void Renderer::initVertexBuffer() {
