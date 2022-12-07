@@ -131,7 +131,7 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = Renderer::Get().getRenderPass();
+    pipelineInfo.renderPass = Renderer::Get().renderpass.getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 

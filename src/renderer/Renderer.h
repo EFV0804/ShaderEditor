@@ -14,6 +14,8 @@
 #include "Mesh.h"
 #include "Window.h"
 #include "Swapchain.h"
+#include "RenderPass.h"
+
 //#include "VkUtilities.h"
 
 class Renderable;
@@ -92,6 +94,7 @@ public:
 * a Vulkan surface, i.e an abstraction of the GLFW window than Vulkan can interact with.
 */
     VkSurfaceKHR surface;
+
     Swapchain swapchain;
 
     /**
@@ -152,12 +155,14 @@ public:
 
     void updateCameraBuffer(const CameraBuffer &camData);
 
-    /*
- * \brief Returns the render pass
- */
-    const vk::RenderPass &getRenderPass() const { return renderPass; }
 
     const vk::DescriptorSetLayout &getCameraDescriptorLayout() const { return cameraDescriptorLayout; }
+
+    vk::Format findSupportedFormat(const std::vector<vk::Format> &candidates, vk::ImageTiling tiling,
+                                   vk::FormatFeatureFlags features);
+    void
+    createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
+                vk::MemoryPropertyFlagBits properties, vk::Image &image, vk::DeviceMemory &imageMemory);
 
     /**
  * Deletion queue used to ensure destruction of Vulkan entities. Uses FIFO logic.
@@ -167,30 +172,20 @@ public:
 * indicates the number corresponding to the current frame. Equivalent to currentFrame % MAX_FRAME_DRAWS.
 */
     int currentFrame = 0;
+    /*!
+ * \brief Creates an image view object, and adds it to the deletion queue.
+ *
+ * \param image the image to use to make the image view
+ * \param format
+ * \param aspectFlags
+ *
+ * \return Returns the created image view object.
+ */
+    vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
+    RenderPass renderpass;
 private:
 
-    /*
-     * Describes how the rendering process should go. Manages the relationship between attachments and subpasses.
-     */
-    vk::RenderPass renderPass;
-    /**
-     * A vector of swapchain images, that are used as attachments for framebuffers.
-     */
-    std::vector<vk::ImageView> swapchainImagesViews;
-    /**
-     * \brief Provides information about the swapchain.
-     *
-     * \var vk::SurfaceCapabilitesKHR : surfaceCapabilities
-     * \var std::vector<vk::SurfaceFormats> : supportedFormats
-     * \var std::vector<vk::PresentModeKHR> : supportedPresentationModes
-     */
 
-    struct DepthBufferImage {
-        vk::Image depthImage;
-        vk::DeviceMemory depthImageMemory;
-        vk::ImageView depthImageView;
-    };
-    DepthBufferImage depthBufferImage;
     /**
  * The available memory types and properties available on the current physical device.
  */
@@ -229,10 +224,7 @@ private:
      * Vector a frame data describing all the frames in the process of being rendered/presented.
      */
     std::vector<FrameData> frames;
-    /*
-     * A vector of framebuffers. A framebuffer references an image view for the swapchain that are used for color, depth and stencils.
-     */
-    std::vector<vk::Framebuffer> swapchainFramebuffers;
+
     /*
      * a Buffer object destined to store vertices to be rendered.
      */
@@ -353,25 +345,16 @@ private:
      */
     bool checkDeviceExtensionSupport(vk::PhysicalDevice pPhysicalDevice);
 
-    /*!
-     * \brief Creates an image view object, and adds it to the deletion queue.
-     *
-     * \param image the image to use to make the image view
-     * \param format
-     * \param aspectFlags
-     *
-     * \return Returns the created image view object.
-     */
-    vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
+
 
     void createDepthBufferRessources();
 
-    vk::Format findDepthFormat();
+//    vk::Format findDepthFormat();
 
     bool hasStencilComponent(VkFormat format);
 
-    vk::Format findSupportedFormat(const std::vector<vk::Format> &candidates, vk::ImageTiling tiling,
-                                   vk::FormatFeatureFlags features);        /*!
+
+    /*!
      * \brief Gets the appropriate memory type index for the requested memory usage.
      *
      * \param [in] NOT IMPLEMENTED, see function definition. memory property flag determines the type of memory for which to return the index.
@@ -387,7 +370,5 @@ private:
  */
     FrameData *getCurrentFrame() { return &frames.at(currentFrame % MAX_FRAME_DRAWS); }
 
-    void
-    createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
-                vk::MemoryPropertyFlagBits properties, vk::Image &image, vk::DeviceMemory &imageMemory);
+
 };
