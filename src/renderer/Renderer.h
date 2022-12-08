@@ -290,8 +290,7 @@ private:
      */
     void initVertexBuffer();
 
-    void initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size,
-                         std::vector<uint32_t> indices);
+    void initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size);
 
     /*!
      * \brief initialises physical device.

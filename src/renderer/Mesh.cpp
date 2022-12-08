@@ -89,9 +89,6 @@ bool Mesh::loadFromFile() {
         for (const auto& index : shape.mesh.indices) {
             Vertex vertex{};
 
-
-//            indices.push_back(indices.size());
-
             vertex.pos = {
                     attrib.vertices[3 * index.vertex_index + 0],
                     attrib.vertices[3 * index.vertex_index + 1],

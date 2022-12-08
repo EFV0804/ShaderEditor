@@ -1,7 +1,16 @@
 cmake_minimum_required(VERSION 3.23)
 project(shaderEditor)
 set(CMAKE_CXX_STANDARD 20)
-
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    message(" ")
+    message("CMAKE IN DEBUG MODE")
+    message(" ")
+elseif(CMAKE_BUILD_TYPE MATCHES Release)
+    message(" ")
+    message("CMAKE IN RELEASE MODE")
+    set(CMAKE_EXE_LINKER_FLAGS "-static")
+    message(" ")
+endif ()
 add_subdirectory(src)
 add_subdirectory(externals)
 

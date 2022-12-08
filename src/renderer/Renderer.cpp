@@ -150,7 +150,6 @@ void Renderer::drawRenderables(std::vector<Renderable> *renderables) {
                                                                             vk::IndexType::eUint32);
         getCurrentFrame()->commandBuffer.getCommandBuffer().drawIndexed(
                 static_cast<uint32_t>(renderables->at(i).getMesh()->indices.size()), 1, 0, 0, 0);
-
     }
 }
 
@@ -445,12 +444,16 @@ void Renderer::initPhysicalDevice() {
 
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !physicalDevices.empty(), "No GPU with vulkan support found")
 
-    for (auto device: physicalDevices) {
-        if (checkDeviceSuitable(device)) {
-            physicalDevice = device;
-            physicalDeviceMemoryProperties = physicalDevice.getMemoryProperties();
+    for (auto physDevice: physicalDevices) {
+        vk::PhysicalDeviceProperties properties = physDevice.getProperties();
+        if(properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu){
+            if (checkDeviceSuitable(physDevice)) {
+                physicalDevice = physDevice;
+                physicalDeviceMemoryProperties = physicalDevice.getMemoryProperties();
 
+            }
         }
+
     }
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !physicalDevice == NULL, "No suitable devices found")
 }
@@ -560,7 +563,6 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
     return imageView;
 }
 
-
 bool Renderer::hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
@@ -619,18 +621,40 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
 
     //Indices size && vertices size
 
+    const Mesh* last_mesh = nullptr;
 
-    for (int i = 0; i < renderables->size(); i++) {
-        for (auto &index: renderables->at(i).getMesh()->indices) {
-            indices.push_back(index);
-        }
-        for (auto &vertex: renderables->at(i).getMesh()->vertices) {
-            vertices.push_back(vertex);
-        }
+//    for (int i = 0; i < renderables->size(); i++) {
+//
+//
+//
+//        if(last_mesh != renderables->at(i).getMesh()){
+//            last_mesh = renderables->at(i).getMesh();
+//            for (auto &index: renderables->at(i).getMesh()->indices) {
+//                indices.push_back(index);
+//            }
+//            for (auto &vertex: renderables->at(i).getMesh()->vertices) {
+//                vertices.push_back(vertex);
+//            }
+//
+//        }
+//
+//        indexDeviceSize += indices.size() * sizeof(uint32_t);
+//        vertexDeviceSize += vertices.size() * sizeof(Vertex);
+//    }
 
-        indexDeviceSize += indices.size() * sizeof(uint32_t);
-        vertexDeviceSize += vertices.size() * sizeof(Vertex);
+
+//TODO check if last loaded mesh is the same as current one
+
+    for (auto &index: renderables->at(0).getMesh()->indices) {
+        indices.push_back(index);
     }
+    for (auto &vertex: renderables->at(0).getMesh()->vertices) {
+        vertices.push_back(vertex);
+    }
+    indexDeviceSize += indices.size() * sizeof(uint32_t);
+    vertexDeviceSize += vertices.size() * sizeof(Vertex);
+
+
     std::vector<vk::MemoryPropertyFlagBits> stagingFlags;
     stagingFlags.reserve(2);
     stagingFlags.emplace_back(vk::MemoryPropertyFlagBits::eHostVisible);
@@ -665,7 +689,7 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     std::vector<vk::MemoryPropertyFlagBits> flags;
     flags.push_back(vk::MemoryPropertyFlagBits::eHostCoherent);
     flags.push_back(vk::MemoryPropertyFlagBits::eHostVisible);
-    initIndexBuffer(flags, indexDeviceSize, indices);
+    initIndexBuffer(flags, indexDeviceSize);
 
 
     // Copy to index buffer
@@ -734,6 +758,9 @@ void Renderer::loadMeshes(std::vector<Renderable> *renderables) {
     device.freeCommandBuffers(getCurrentFrame()->commandPool,
                               1,
                               &singleUseCmd.getCommandBuffer());
+
+    mainDeletionQueue.push_function([=]() { stagingBuffer.destroy(); });
+    mainDeletionQueue.push_function([=]() { vertexBuffer.destroy(); });
 }
 
 void Renderer::initVertexBuffer() {
@@ -757,18 +784,15 @@ void Renderer::initVertexBuffer() {
 //
 //    uint32_t vertexMemoryTypeIndex = getMemoryTypeIndex(vertexFlags);
 //    vertexBuffer.init(queueFamilyIndices.graphicsFamily);
-    mainDeletionQueue.push_function([=]() { stagingBuffer.destroy(); });
-    mainDeletionQueue.push_function([=]() { vertexBuffer.destroy(); });
+
 
 
 }
 
-void Renderer::initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size,
-                               std::vector<uint32_t> indices) {
+void Renderer::initIndexBuffer(std::vector<vk::MemoryPropertyFlagBits> flags, vk::DeviceSize size) {
 
     indexBuffer.setSize(size);
-    std::vector<vk::MemoryPropertyFlagBits> indexFlags;
-    uint32_t indexMemoryTypeIndex = getMemoryTypeIndex(indexFlags);
+    uint32_t indexMemoryTypeIndex = getMemoryTypeIndex(flags);
     indexBuffer.init(queueFamilyIndices.graphicsFamily);
     indexBuffer.allocate(indexMemoryTypeIndex);
     indexBuffer.bind();

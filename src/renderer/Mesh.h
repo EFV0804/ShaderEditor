@@ -56,8 +56,9 @@ public:
 //            {{0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 1.0f}},
 //            {{-0.5f, 0.5f, 0.f}, {1.0f, 1.0f, 1.0f}}
 //    };
-    std::vector<Vertex> vertices;
+//
 //    const std::vector<uint32_t> indices = {0, 1, 2, 2, 3, 0};
+    std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
     uint64_t getSize() const {return vertices.size() * sizeof(Vertex);}
