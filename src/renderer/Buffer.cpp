@@ -16,21 +16,21 @@ Buffer::Buffer(vk::BufferUsageFlags pUsage, uint32_t pSize, vk::SharingMode pSha
 void Buffer::init(uint32_t queueFamilyIndex) {
 
     buffer = Renderer::Get().device.createBuffer(getBufferCreateInfo(queueFamilyIndex));
-    SD_RENDERER_DEBUG("Initilised buffer");
+    SE_RENDERER_DEBUG("Initilised buffer");
 }
 
 void Buffer::map( int offset, uint64_t dataSize) {
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Allocated,
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Allocated,
                                 "Buffer memory not allocated, can't map unallocated memory.");
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state != BufferState::Mapped, "Buffer memory is already mapped")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state != BufferState::Mapped, "Buffer memory is already mapped")
     bufferStart = static_cast<float *>(Renderer::Get().device.mapMemory(bufferMemory, offset, dataSize));
     state = BufferState::Mapped;
 
 }
 
 void Buffer::unMap() {
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Mapped,
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Mapped,
                                 "Trying to unmap memory that was is not mapped.")
     Renderer::Get().device.unmapMemory(bufferMemory);
     state = BufferState::Allocated;
@@ -56,7 +56,7 @@ void Buffer::bind(int memoryOffset) {
 }
 
 void Buffer::copy(const void *src, uint64_t dataSize) {
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state = BufferState::Mapped, "Buffer memory is not mapped")
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state = BufferState::Mapped, "Buffer memory is not mapped")
     memcpy(bufferStart, src, dataSize);
 }
 

@@ -29,6 +29,4 @@ public:
 private:
     std::vector<Material> materials;
     std::vector<Mesh> meshes;
-
-
 };

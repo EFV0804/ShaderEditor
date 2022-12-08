@@ -81,14 +81,14 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
     vk::Viewport viewport;
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)Renderer::Get().getSwapchainExtent().width;
-    viewport.height = (float)Renderer::Get().getSwapchainExtent().height;
+    viewport.width = (float)Renderer::Get().swapchain.getSwapchainExtent().width;
+    viewport.height = (float)Renderer::Get().swapchain.getSwapchainExtent().height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     vk::Rect2D scissor;
     scissor.offset = 0;
-    scissor.extent = Renderer::Get().getSwapchainExtent();
+    scissor.extent = Renderer::Get().swapchain.getSwapchainExtent();
 
     vk::PipelineViewportStateCreateInfo viewportInfo = {};
     viewportInfo.sType = vk::StructureType::ePipelineViewportStateCreateInfo;
@@ -131,7 +131,7 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = Renderer::Get().getRenderPass();
+    pipelineInfo.renderPass = Renderer::Get().renderpass.getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -141,7 +141,7 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
                                                                  nullptr,
                                                                  &graphicsPipeline);
 
-    SD_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,result == vk::Result::eSuccess, "Pipeline initialisation failed." );
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,result == vk::Result::eSuccess, "Pipeline initialisation failed." );
 
 
 }

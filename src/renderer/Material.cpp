@@ -48,7 +48,7 @@ GraphicsPipeline Material::loadPipeline(std::vector<ShaderInfo> shadersInfo) {
             pushConstants.push_back(pushConstant);
         }
     }
-    //Copy elision, not call to copy constructor is made.
+    //Copy elision, no call to copy constructor is made.
     return GraphicsPipeline{ stages, pushConstants};
 }
 
