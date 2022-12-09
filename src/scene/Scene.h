@@ -19,7 +19,7 @@ public:
 
     std::vector<Renderable> renderables;
     void load();
-    void update();
+    void update(float dt);
     void draw();
     void cleanUp();
     DeletionQueue sceneDeletionQueue;

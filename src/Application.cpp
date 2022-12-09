@@ -6,6 +6,7 @@
 #include "Core.h"
 #include "UI.h"
 #include "VKRenderer.h"
+#include "Timer.h"
 
 void Application::init(std::string pAppName) {
 
@@ -19,8 +20,11 @@ void Application::init(std::string pAppName) {
 
 void Application::run() {
     while (!glfwWindowShouldClose(UI::Get().window.getWindow())) {
+        Timer timer;
+        float dt = timer.computeDeltaTime();
+
         glfwPollEvents();
-        loadedScene.update();
+        loadedScene.update(dt);
         loadedScene.draw();
     }
 }
