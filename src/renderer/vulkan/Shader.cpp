@@ -21,7 +21,7 @@ vk::ShaderModule Shader::makeModule() {
     shaderModuleCreateInfo.codeSize = shaderCode.size();
     shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
-    return Renderer::Get().device.createShaderModule(shaderModuleCreateInfo);
+    return VKRenderer::Get().device.createShaderModule(shaderModuleCreateInfo);
 }
 
 std::vector<char> Shader::getShaderCode() {
@@ -43,5 +43,5 @@ std::vector<char> Shader::getShaderCode() {
 }
 
 void Shader::cleanUp(){
-    Renderer::Get().device.destroyShaderModule(module);
+    VKRenderer::Get().device.destroyShaderModule(module);
 }

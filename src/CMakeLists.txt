@@ -1,8 +1,14 @@
 cmake_minimum_required(VERSION 3.23)
 
 #create main exec and include source
-add_executable(shaderEditor main.cpp)
+add_executable(shaderEditor main.cpp Application.cpp Application.h)
 target_include_directories(shaderEditor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+
+add_library(application STATIC Application.cpp Application.h)
+# include current source to library
+target_include_directories(application PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(application PRIVATE scene_manager)
 
 # add renderer folder and link renderer lib with main exec
 add_subdirectory(renderer)

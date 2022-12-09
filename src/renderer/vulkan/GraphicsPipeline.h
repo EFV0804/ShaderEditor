@@ -2,7 +2,7 @@
 #include <vulkan/vulkan.hpp>
 #include <vector>
 
-class Renderer;
+class VKRenderer;
 
 class GraphicsPipeline
 {

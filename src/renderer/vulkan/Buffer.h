@@ -7,7 +7,7 @@
 #include <Vulkan/vulkan.hpp>
  #include <memory>
 
-class Renderer;
+class VKRenderer;
 /*
  * enum buffer's possible states: Empty, Allocated, Mapped, Destroyed
  */

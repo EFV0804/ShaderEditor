@@ -3,12 +3,12 @@
 //
 
 #include "RenderPass.h"
-#include "Renderer.h"
+#include "VKRenderer.h"
 
 void RenderPass::init() {
     SE_RENDERER_DEBUG("RenderPass initialisation");
 
-    Renderer &renderer = Renderer::Get();
+    VKRenderer &renderer = VKRenderer::Get();
 
     vk::RenderPassCreateInfo renderPassCreateInfo = {};
     renderPassCreateInfo.sType = vk::StructureType::eRenderPassCreateInfo;
@@ -91,7 +91,7 @@ void RenderPass::initFramebuffers() {
     SE_RENDERER_DEBUG("Frame buffers initialisation");
     createDepthBufferResources();
 
-    Renderer &renderer = Renderer::Get();
+    VKRenderer &renderer = VKRenderer::Get();
     const Swapchain &swapchain = renderer.swapchain;
     std::vector<vk::Image> images = renderer.device.getSwapchainImagesKHR(swapchain.getSwapchain());
 
@@ -120,17 +120,17 @@ void RenderPass::initFramebuffers() {
 }
 
 void RenderPass::cleanUp() {
-    Renderer::Get().device.destroyRenderPass(renderPass);
+    VKRenderer::Get().device.destroyRenderPass(renderPass);
 
     for (auto &image: imageViews) {
-        Renderer::Get().device.destroyImageView(image);
+        VKRenderer::Get().device.destroyImageView(image);
     }
     for (auto &framebuffer: framebuffers) {
-        Renderer::Get().device.destroyFramebuffer(framebuffer);
+        VKRenderer::Get().device.destroyFramebuffer(framebuffer);
     }
-    Renderer::Get().device.destroyImageView(depthBufferImage.depthImageView);
-    Renderer::Get().device.destroyImage(depthBufferImage.depthImage);
-    Renderer::Get().device.freeMemory(depthBufferImage.depthImageMemory);
+    VKRenderer::Get().device.destroyImageView(depthBufferImage.depthImageView);
+    VKRenderer::Get().device.destroyImage(depthBufferImage.depthImage);
+    VKRenderer::Get().device.freeMemory(depthBufferImage.depthImageMemory);
 }
 
 void RenderPass::begin(const uint32_t &frameIndex, const vk::CommandBuffer &cmd) {
@@ -139,7 +139,7 @@ void RenderPass::begin(const uint32_t &frameIndex, const vk::CommandBuffer &cmd)
     renderPassBeginInfo.renderPass = renderPass;
     renderPassBeginInfo.renderArea.offset.x = 0;
     renderPassBeginInfo.renderArea.offset.y = 0;
-    renderPassBeginInfo.renderArea.extent = Renderer::Get().swapchain.getSwapchainExtent();
+    renderPassBeginInfo.renderArea.extent = VKRenderer::Get().swapchain.getSwapchainExtent();
     renderPassBeginInfo.framebuffer = framebuffers.at(frameIndex);
 
     std::array<vk::ClearValue, 2> clearValues{};
@@ -158,7 +158,7 @@ void RenderPass::end(const vk::CommandBuffer &cmd) {
 }
 
 vk::Format RenderPass::findDepthFormat() {
-    return Renderer::Get().findSupportedFormat(
+    return VKRenderer::Get().findSupportedFormat(
             {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
             vk::ImageTiling::eOptimal,
             vk::FormatFeatureFlagBits::eDepthStencilAttachment
@@ -166,7 +166,7 @@ vk::Format RenderPass::findDepthFormat() {
 }
 
 void RenderPass::createDepthBufferResources() {
-    Renderer &renderer = Renderer::Get();
+    VKRenderer &renderer = VKRenderer::Get();
     vk::Format depthFormat = findDepthFormat();
     renderer.createImage(renderer.swapchain.getSwapchainExtent().width,
                          renderer.swapchain.getSwapchainExtent().height,

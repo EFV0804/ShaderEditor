@@ -26,3 +26,19 @@ void Logger::init() {
     UILogger->set_level(spdlog::level::trace);
 
 }
+
+/*!
+ *\brief Example function to demonstrate how to use the logging functions.
+ */
+void Logger::loggingExample(){
+// ***************--- LOGGING EXAMPLE ---************//
+    int a = 5;
+    SE_RENDERER_INFO("Test info message VAR{0}", a);
+    SE_RENDERER_WARN("Test warning message");
+    SE_RENDERER_ERROR("Test error message");
+    SE_RENDERER_DEBUG("Test debug message");
+    SE_RENDERER_CRITICAL("Test critical message");
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, a>5, "a is inferior to 5");
+    SE_INTERNAL_ASSERT_NO_MSG(_RENDERER_, a>5);
+// **************************************************//
+}

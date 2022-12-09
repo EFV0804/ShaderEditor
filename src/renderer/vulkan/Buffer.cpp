@@ -3,7 +3,7 @@
 //
 
 #include "Buffer.h"
-#include "Renderer.h"
+#include "VKRenderer.h"
 #include <iostream>
 
 Buffer::Buffer(vk::BufferUsageFlags pUsage, uint32_t pSize, vk::SharingMode pSharingMode) :
@@ -15,7 +15,7 @@ Buffer::Buffer(vk::BufferUsageFlags pUsage, uint32_t pSize, vk::SharingMode pSha
 
 void Buffer::init(uint32_t queueFamilyIndex) {
 
-    buffer = Renderer::Get().device.createBuffer(getBufferCreateInfo(queueFamilyIndex));
+    buffer = VKRenderer::Get().device.createBuffer(getBufferCreateInfo(queueFamilyIndex));
     SE_RENDERER_DEBUG("Initilised buffer");
 }
 
@@ -24,7 +24,7 @@ void Buffer::map( int offset, uint64_t dataSize) {
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Allocated,
                                 "Buffer memory not allocated, can't map unallocated memory.");
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state != BufferState::Mapped, "Buffer memory is already mapped")
-    bufferStart = static_cast<float *>(Renderer::Get().device.mapMemory(bufferMemory, offset, dataSize));
+    bufferStart = static_cast<float *>(VKRenderer::Get().device.mapMemory(bufferMemory, offset, dataSize));
     state = BufferState::Mapped;
 
 }
@@ -32,13 +32,13 @@ void Buffer::map( int offset, uint64_t dataSize) {
 void Buffer::unMap() {
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, state == BufferState::Mapped,
                                 "Trying to unmap memory that was is not mapped.")
-    Renderer::Get().device.unmapMemory(bufferMemory);
+    VKRenderer::Get().device.unmapMemory(bufferMemory);
     state = BufferState::Allocated;
 }
 
 void Buffer::allocate(uint32_t memoryTypeIndex) {
     vk::MemoryRequirements memRequirements;
-    Renderer::Get().device.getBufferMemoryRequirements(buffer, &memRequirements);
+    VKRenderer::Get().device.getBufferMemoryRequirements(buffer, &memRequirements);
 
     vk::MemoryAllocateInfo memoryAllocateInfo = {};
     memoryAllocateInfo.sType = vk::StructureType::eMemoryAllocateInfo;
@@ -47,12 +47,12 @@ void Buffer::allocate(uint32_t memoryTypeIndex) {
     memoryAllocateInfo.pNext = nullptr;
 
 
-    bufferMemory = Renderer::Get().device.allocateMemory(memoryAllocateInfo);
+    bufferMemory = VKRenderer::Get().device.allocateMemory(memoryAllocateInfo);
     state = BufferState::Allocated;
 }
 
 void Buffer::bind(int memoryOffset) {
-    Renderer::Get().device.bindBufferMemory(buffer, bufferMemory, memoryOffset);
+    VKRenderer::Get().device.bindBufferMemory(buffer, bufferMemory, memoryOffset);
 }
 
 void Buffer::copy(const void *src, uint64_t dataSize) {
@@ -61,8 +61,8 @@ void Buffer::copy(const void *src, uint64_t dataSize) {
 }
 
 void Buffer::destroy() {
-    Renderer::Get().device.destroyBuffer(buffer);
-    Renderer::Get().device.freeMemory(bufferMemory);
+    VKRenderer::Get().device.destroyBuffer(buffer);
+    VKRenderer::Get().device.freeMemory(bufferMemory);
     state = BufferState::Destroyed;
 }
 

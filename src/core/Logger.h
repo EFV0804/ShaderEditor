@@ -8,7 +8,7 @@
 #include <memory>
 #include <filesystem>
 
-#define VERBOSITY spdlog::level::trace
+#define VERBOSITY spdlog::level::err
 
 class Logger {
 public:
@@ -21,7 +21,7 @@ public:
     inline static std::shared_ptr<spdlog::logger>& getCoreLogger() {return coreLogger;}
     inline static std::shared_ptr<spdlog::logger>& getSceneLogger() {return sceneLogger;}
     inline static std::shared_ptr<spdlog::logger>& getUILogger() {return UILogger;}
-
+    void loggingExample();
 private:
     static std::shared_ptr<spdlog::logger> rendererLogger;
     static std::shared_ptr<spdlog::logger> coreLogger;

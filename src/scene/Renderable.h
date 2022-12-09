@@ -3,7 +3,6 @@
 //
 #pragma once
 
-#include "Mesh.h"
 #include "Material.h"
 #include "glm/glm.hpp"
 

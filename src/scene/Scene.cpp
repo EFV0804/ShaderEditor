@@ -3,8 +3,9 @@
 //
 
 #include "Scene.h"
-#include "Mesh.h"
-#include "Material.h"
+#include "UI.h"
+#include "vulkan/Mesh.h"
+#include "vulkan/Material.h"
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 Scene::Scene(){
@@ -17,7 +18,7 @@ void Scene::load() {
     glm::vec3 camPos = { -18.0f, -17.0f, -25.0f};
     camBuffer.view = glm::translate(glm::mat4(1.f), camPos);
     camBuffer.proj = glm::perspective(glm::radians(70.f),
-                                      Renderer::Get().swapchain.getSwapchainExtent().width / (float) Renderer::Get().swapchain.getSwapchainExtent().height,
+                                      (float) UI::Get().window.getWidth()/ (float) UI::Get().window.getHeight(),
                                       0.1f,
                                       200.0f);
 
@@ -75,13 +76,13 @@ void Scene::update(){
 
     for(auto& renderable : renderables){
 
-        renderable.transform = glm::rotate( renderable.transform, glm::radians( Renderer::Get().currentFrame*0.9f), glm::vec3(0, 1, 0));
+        renderable.transform = glm::rotate( renderable.transform, glm::radians( Renderer::Get().getCurrentFrame()*0.9f), glm::vec3(0, 1, 0));
 //        renderable.transform += glm::translate( glm::vec3(index*3.5,0,-5));
 //        glm::mat4 scale = glm::scale(glm::vec3(0.1,0.1,0.1));
 //        glm::mat4 new_model  = translation * rotation * renderable.transform;
 //        renderable.transform = new_model;
     }
-    Renderer::Get().updateCameraBuffer(camBuffer);
+    Renderer::Get().updateCamera(camBuffer);
 
 }
 void Scene::draw() {
@@ -89,6 +90,6 @@ void Scene::draw() {
 }
 
 void Scene::cleanUp() {
-    Renderer::Get().device.waitIdle();
+    Renderer::Get().waitIdle();
     sceneDeletionQueue.flush();
 }

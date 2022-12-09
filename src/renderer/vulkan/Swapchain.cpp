@@ -3,13 +3,13 @@
 //
 
 #include "Swapchain.h"
-#include "Renderer.h"
-
+#include "VKRenderer.h"
+#include "UI.h"
 void Swapchain::init() {
     SE_RENDERER_DEBUG("Swapchain initialisation");
-    Renderer &renderer = Renderer::Get();
-    swapchainExtent.width = renderer.window.getWidth();
-    swapchainExtent.height = renderer.window.getHeight();
+    VKRenderer &renderer = VKRenderer::Get();
+    swapchainExtent.width = UI::Get().window.getWidth();
+    swapchainExtent.height = UI::Get().window.getHeight();
 
     setSwapchainDetails();
 
@@ -61,7 +61,7 @@ void Swapchain::init() {
 
 void Swapchain::setSwapchainDetails() {
     SE_RENDERER_DEBUG("Setting Swapchain Details");
-    Renderer &renderer = Renderer::Get();
+    VKRenderer &renderer = VKRenderer::Get();
     swapchainDetails.surfaceCapabilities = renderer.physicalDevice.getSurfaceCapabilitiesKHR(renderer.surface);
     swapchainDetails.supportedFormats = renderer.physicalDevice.getSurfaceFormatsKHR(renderer.surface);
     swapchainDetails.supportedPresentationModes = renderer.physicalDevice.getSurfacePresentModesKHR(renderer.surface);
@@ -69,13 +69,13 @@ void Swapchain::setSwapchainDetails() {
 
 void Swapchain::setSwapchainExtent(const vk::SurfaceCapabilitiesKHR &surfaceCapabilities) {
     SE_RENDERER_DEBUG("Setting Swapchain Extent");
-    Renderer &renderer = Renderer::Get();
+    VKRenderer &renderer = VKRenderer::Get();
     if (surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         swapchainExtent = surfaceCapabilities.currentExtent;
     } else {
         VkExtent2D newExtent{};
-        newExtent.width = static_cast<uint32_t>(renderer.window.getWidth());
-        newExtent.height = static_cast<uint32_t>(renderer.window.getHeight());
+        newExtent.width = static_cast<uint32_t>(UI::Get().window.getWidth());
+        newExtent.height = static_cast<uint32_t>(UI::Get().window.getHeight());
 
         newExtent.width = std::max(surfaceCapabilities.minImageExtent.width,
                                    std::min(surfaceCapabilities.maxImageExtent.width, newExtent.width));
@@ -111,5 +111,5 @@ vk::SurfaceFormatKHR Swapchain::getSurfaceFormat(const std::vector<vk::SurfaceFo
 }
 
 void Swapchain::cleanUp() {
-    Renderer::Get().device.destroySwapchainKHR(swapchain);
+    VKRenderer::Get().device.destroySwapchainKHR(swapchain);
 }

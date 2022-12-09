@@ -4,5 +4,5 @@ message("generating ui")
 # make renderer library
 add_library(ui ${UI_SRC})
 target_include_directories(ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ui renderer glfw core)
+target_link_libraries(ui renderer glfw core application)
 

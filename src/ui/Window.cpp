@@ -3,7 +3,7 @@
 //
 
 #include "Window.h"
-#include "Renderer.h"
+#include "Application.h"
 
 Window::Window(int pHeight, int pWidth): size(pHeight,pWidth) {
 
@@ -15,11 +15,11 @@ void Window::init(){
 
     SE_UI_DEBUG("Window initialisation");
 
-    std::string name = "The Best Window";
+    std::string name = Application::Get().appName;
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    window = glfwCreateWindow(size.height, size.width, name.c_str(), nullptr, nullptr);
+    window = glfwCreateWindow(size.width, size.height, name.c_str(), nullptr, nullptr);
 
     if (window == nullptr) {
         SE_UI_ERROR("Window failed to initialise");

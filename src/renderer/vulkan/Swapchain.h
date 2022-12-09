@@ -47,7 +47,7 @@ private:
     /**
      * The extent of the swapchain, a width and height.
      */
-    vk::Extent2D swapchainExtent{800, 600};
+    vk::Extent2D swapchainExtent{1920, 1080};
     /**
     * The format used for the swapchain images. Defaults to 32bits unsigned normalised.
     */

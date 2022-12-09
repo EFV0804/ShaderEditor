@@ -10,8 +10,6 @@
 #include <GLFW/glfw3.h>
 #include "Logger.h"
 
-class Renderer;
-
 struct Size{
     Size(int height, int width):height(height), width(width){};
     int height;

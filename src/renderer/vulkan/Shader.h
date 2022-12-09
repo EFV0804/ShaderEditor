@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.hpp>
 #include <vector>
 #include <string>
-#include "Renderer.h"
+#include "VKRenderer.h"
 
 class Shader {
 public:

@@ -3,7 +3,7 @@
 //
 
 #include "CommandBuffer.h"
-#include "Renderer.h"
+#include "VKRenderer.h"
 void CommandBuffer::begin(vk::CommandBufferUsageFlagBits flags){
     vk::CommandBufferBeginInfo commandBufferBeginInfo{};
     commandBufferBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
@@ -35,7 +35,7 @@ void CommandBuffer::allocate(const vk::CommandPool& pool, bool isPrimary){
     commandBufferAllocInfo.commandBufferCount = 1;
     commandBufferAllocInfo.level = level;
 
-    cmd = Renderer::Get().device.allocateCommandBuffers(commandBufferAllocInfo).at(0);
+    cmd = VKRenderer::Get().device.allocateCommandBuffers(commandBufferAllocInfo).at(0);
 }
 
 void CommandBuffer::cleanUp(){
