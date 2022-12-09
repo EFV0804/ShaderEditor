@@ -7,11 +7,14 @@
 #include "UI.h"
 #include "Material.h"
 #include "Application.h"
+#include "Timer.h"
+
 
 int VKRenderer::init() {
 
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_, !isInit, "Renderer is already initialised, cannot be initialised twice.")
-
+    Timer timer;
+    timer.reset();
     try {
         initInstance();
         initSurface();
@@ -27,11 +30,12 @@ int VKRenderer::init() {
         initCameraBuffers();
         createSynchronisation();
     }
+
     catch (const std::runtime_error &e) {
         SE_RENDERER_ERROR("Renderer failed to initialise: {}", e.what());
         return EXIT_FAILURE;
     }
-    SE_RENDERER_INFO("Renderer initialised successfully");
+    SE_RENDERER_INFO("Renderer initialised successfully in {} ms", timer.elapsedMilliseconds());
 
     isInit = true;
     return EXIT_SUCCESS;
