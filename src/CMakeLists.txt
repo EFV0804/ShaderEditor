@@ -1,6 +1,11 @@
-cmake_minimum_required(VERSION 3.23)
-
+cmake_minimum_required(VERSION 3.24)
 #create main exec and include source
+message("Generating executable")
+
+if(COMMAND cmake_policy)
+    cmake_policy(SET CMP0003 NEW)
+endif(COMMAND cmake_policy)
+
 add_executable(shaderEditor main.cpp Application.cpp Application.h)
 target_include_directories(shaderEditor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

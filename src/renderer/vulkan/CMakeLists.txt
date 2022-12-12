@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.23)
-
+cmake_minimum_required(VERSION 3.24)
 #get all files from renderer
 file(GLOB VULKAN_RENDERER_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 message("generating vulkan renderer")
