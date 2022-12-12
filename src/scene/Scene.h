@@ -25,6 +25,7 @@ public:
     DeletionQueue sceneDeletionQueue;
 
     CameraBuffer camBuffer;
+    glm::vec3 camPos{-18.0f, -17.0f, -25.0f};
 
 private:
     std::vector<Material> materials;
