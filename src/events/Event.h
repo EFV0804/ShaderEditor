@@ -45,11 +45,15 @@ public:
     EventDispatcher(Event& pEvent): event(pEvent){}
 
     //Runs the given event function if it matches the event type
+    //Takes in an event type T and a function "type" F
     template<typename T, typename F>
     bool Dispatch(const F& func)
     {
+        //Check if the event being dispatched matches the given Event Type
         if (event.getEventType() == T::GetStaticType())
         {
+            //bitwise OR assignment |=
+            //isHandled = isHandled or function return
             event.isHandled |= func(static_cast<T&>(event));
             return true;
         }

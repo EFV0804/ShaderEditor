@@ -5,6 +5,8 @@
 #pragma once
 #include "Scene.h"
 #include <string>
+#include "Event.h"
+#include "EditorController.h"
 
 class Application {
 public:
@@ -19,6 +21,7 @@ public:
     void init(std::string pAppName);
     void run();
     void close();
+    void onEvent(Event& e);
 
     static Application &Get() {
         static Application instance;
@@ -27,4 +30,5 @@ public:
 
     Scene loadedScene{};
     std::string appName;
+    EditorController editor;
 };
