@@ -13,14 +13,14 @@ public:
             : mouseX(x), mouseY(y) {}
 
     EventType getEventType() const override {return type;}
-    static EventType getStaticType() {return EventType::MouseButtonPressed;}
+    static EventType getStaticType() {return EventType::MouseMoved;}
 
     float getX() const { return mouseX; }
     float getY() const { return mouseY; }
 
 private:
     float mouseX, mouseY;
-    EventType type = EventType::MouseButtonPressed;
+    EventType type = EventType::MouseMoved;
 };
 
 #endif //SHADEREDITOR_MOUSEEVENTS_H
