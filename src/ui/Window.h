@@ -9,6 +9,8 @@
 #include <string>
 #include <GLFW/glfw3.h>
 #include "Logger.h"
+#include "Event.h"
+#include <functional>
 
 struct Size{
     Size(int height, int width):height(height), width(width){};
@@ -25,16 +27,20 @@ public:
     Window(const Window&) = delete;
 
     void init();
+    void update();
     void cleanUp();
     GLFWwindow* getWindow(){return window;}
     const int getHeight()const {return size.height;}
     const int getWidth()const {return size.width;}
+    void setCallbackFunction(std::function<void(Event& e)> pEventCallback){eventCallback = pEventCallback;}
+    void setWindowShouldClose(bool value);
+
 
 private:
     bool isInit = false;
     GLFWwindow* window = nullptr;
     Size size;
-
+    std::function<void(Event& e)> eventCallback;
     void updateSize();
 
 

@@ -7,6 +7,8 @@
 #include "vulkan/Mesh.h"
 #include "vulkan/Material.h"
 #include "Timer.h"
+//DIRTY
+#include "glfw/glfw3.h"
 
 
 #define GLM_FORCE_RADIANS
@@ -19,7 +21,11 @@ Scene::Scene() {
 Scene::~Scene() = default;
 
 void Scene::load() {
-    glm::vec3 camPos = {-18.0f, -17.0f, -25.0f};
+//    glm::vec3 camPos = {-18.0f, -17.0f, -25.0f};
+
+    GLFWcursor* cursor = glfwCreateStandardCursor(0);
+    glfwSetCursor(UI::Get().window.getWindow(), cursor);
+
     camBuffer.view = glm::translate(glm::mat4(1.f), camPos);
     camBuffer.proj = glm::perspective(glm::radians(70.f),
                                       (float) UI::Get().window.getWidth() / (float) UI::Get().window.getHeight(),
@@ -81,13 +87,27 @@ void Scene::update(float dt) {
 
     for (auto &renderable: renderables) {
 
-        renderable.transform = glm::rotate(renderable.transform, glm::radians(Renderer::Get().getCurrentFrame() * 20.f) * dt,
+        renderable.transform = glm::rotate(renderable.transform, glm::radians((float)Renderer::Get().getCurrentFrame() * 20.f) * dt,
                                            glm::vec3(0, 1, 0));
 //        renderable.transform += glm::translate( glm::vec3(index*3.5,0,-5));
 //        glm::mat4 scale = glm::scale(glm::vec3(0.1,0.1,0.1));
 //        glm::mat4 new_model  = translation * rotation * renderable.transform;
 //        renderable.transform = new_model;
     }
+
+//    double x, y;
+//    glfwGetCursorPos(UI::Get().window.getWindow(), &x, &y );
+//
+//    camPos = {camPos.x+x, camPos.y+y, -25.0f};
+////    camBuffer.view = glm::lookAt(camPos, glm::vec3(0), glm::vec3(0,1,0));
+//    camBuffer.view = glm::translate(glm::mat4(0.f), camPos)*dt;
+//    camBuffer.proj = glm::perspective(glm::radians(70.f),
+//                                      (float) UI::Get().window.getWidth() / (float) UI::Get().window.getHeight(),
+//                                      0.1f,
+//                                      200.0f);
+//
+//    camBuffer.proj[1][1] *= -1;
+//    camBuffer.viewproj = camBuffer.proj * camBuffer.view;
     Renderer::Get().updateCamera(camBuffer);
 
 }
