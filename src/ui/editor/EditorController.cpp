@@ -3,23 +3,31 @@
 //
 
 #include "EditorController.h"
+#include "Logger.h"
+#include "UI.h"
+#include <memory>
 
-void EditorController::OnEvent(Event& e) {
-    EventDispatcher dispatcher(e);
-    dispatcher.Dispatch<EventType::KeyPressed>();
-    dispatcher.Dispatch<EventType::MouseButtonPressed>()
+#define LAMBDA(func) [this](auto& boop){func(boop);}
+
+void EditorController::onEvent(Event& e) {
+
+    EventDispatcher dispatcher;
+    dispatcher.dispatch<KeyPressedEvent>(LAMBDA(EditorController::onKeyPressed),e);
+
 }
 
 void EditorController::update() {
 
 }
 
-bool EditorController::onKeyPressed(KeyPressedEvent& e) {
+bool EditorController::onKeyPressed(const KeyPressedEvent& e) {
+    SE_UI_DEBUG("Key pressed event");
+    SE_UI_DEBUG("Pressed key code: {}", e.getKeycode());
+
     switch (e.getKeycode()) {
         case 256: //escape
         {
-            //Exit program
-            //TODO: exit program on key pressed
+            UI::Get().window.setWindowShouldClose(true);
             break;
         }
 

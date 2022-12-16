@@ -33,6 +33,7 @@ public:
     const int getHeight()const {return size.height;}
     const int getWidth()const {return size.width;}
     void setCallbackFunction(std::function<void(Event& e)> pEventCallback){eventCallback = pEventCallback;}
+    void setWindowShouldClose(bool value);
 
 
 private:

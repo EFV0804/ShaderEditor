@@ -3,6 +3,7 @@
 //
 
 #include "Window.h"
+#include "UI.h"
 #include "Application.h"
 #include "KeyboardEvents.h"
 Window::Window(int pHeight, int pWidth): size(pHeight,pWidth) {
@@ -32,14 +33,11 @@ void Window::init(){
     // GLFW callbacks work by passing the window ptr and a function+defition as second parameter (of type GLFW**fun)
     glfwSetKeyCallback(window,[](GLFWwindow* window, int key, int scancode, int action, int mods){
 
-        //Cannot capture this, so we get a pointer that we cast as a Window object.
-        // I'm confused but the IDE doesn't scream anymore.
-        auto window_ptr = (Window*)glfwGetWindowUserPointer(window);
         switch (action) {
             case GLFW_PRESS:
             {
                 KeyPressedEvent e(key);
-                window_ptr->eventCallback(e);
+                UI::Get().window.eventCallback(e);
                 break;
             }
 
@@ -58,4 +56,9 @@ void Window::cleanUp(){
 
 void Window::update() {
     glfwPollEvents();
+}
+
+void Window::setWindowShouldClose(bool value) {
+
+    glfwSetWindowShouldClose(window, value);
 }

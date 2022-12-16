@@ -37,6 +37,7 @@ void Application::run() {
 void Application::close() {
     loadedScene.cleanUp();
     Renderer::Get().close();
+
 }
 
 void Application::onEvent(Event &e) {

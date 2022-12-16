@@ -16,9 +16,9 @@ public:
     EditorController &operator=(const EditorController&) = delete;
     EditorController(const EditorController&) = delete;
 
-    void OnEvent(Event& e);
+    void onEvent(Event& e);
     void update();
-    bool onKeyPressed(KeyPressedEvent& e);
+    bool onKeyPressed(const KeyPressedEvent& e);
 };
 
 

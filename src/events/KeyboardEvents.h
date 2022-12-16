@@ -12,11 +12,11 @@ public:
             : keycode(pKeycode) {}
 
     int getKeycode() const { return keycode; }
-
-    EVENT_CLASS_TYPE(KeyPressed)
-    EVENT_CLASS_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
+    EventType getEventType() const override {return type;}
+    static EventType getStaticType() {return EventType::KeyPressed;}
 
 private:
     int keycode;
+    EventType type = EventType::KeyPressed;
 };
 #endif //SHADEREDITOR_KEYBOARDEVENTS_H
