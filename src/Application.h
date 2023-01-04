@@ -7,6 +7,7 @@
 #include <string>
 #include "Event.h"
 #include "EditorController.h"
+#include "EditorView.h"
 
 class Application {
 public:
@@ -30,5 +31,6 @@ public:
 
     Scene loadedScene{};
     std::string appName;
-    EditorController editor;
+    EditorController editorCtrl;
+    EditorView editorView;
 };

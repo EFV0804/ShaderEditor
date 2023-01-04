@@ -8,6 +8,7 @@
 #include "Material.h"
 #include "Application.h"
 #include "Timer.h"
+#include "backends/imgui_impl_vulkan.h"
 
 
 int VKRenderer::init() {
@@ -74,6 +75,11 @@ void VKRenderer::draw(std::vector<Renderable> *renderables) {
 
 //******************--- DRAW OBJECTS ---********************//
     drawRenderables(renderables);
+
+//*****************--- DRAW UI ---*********************//
+    ImDrawData* UIdrawData = ImGui::GetDrawData();
+    ImGui_ImplVulkan_RenderDrawData(UIdrawData,
+                                    getCurrentFrame()->commandBuffer.getCommandBuffer());
 
 //******************--- RENDER PASS ENDS ---*****************//
     renderpass.end(getCurrentFrame()->commandBuffer.getCommandBuffer());
@@ -864,4 +870,68 @@ void VKRenderer::createImage(uint32_t width, uint32_t height, vk::Format format,
                                 "Failed to allocate image");
 
     device.bindImageMemory(image, imageMemory, 0);
+}
+
+void VKRenderer::initImgui() {
+    vk::DescriptorPoolSize pool_sizes[] =
+            {
+                    { vk::DescriptorType::eSampler, 1000 },
+                    { vk::DescriptorType::eCombinedImageSampler, 1000 },
+                    { vk::DescriptorType::eSampledImage, 1000 },
+                    { vk::DescriptorType::eStorageImage, 1000 },
+                    { vk::DescriptorType::eUniformTexelBuffer, 1000 },
+                    { vk::DescriptorType::eStorageTexelBuffer, 1000 },
+                    { vk::DescriptorType::eUniformBuffer, 1000 },
+                    { vk::DescriptorType::eStorageBuffer, 1000 },
+                    { vk::DescriptorType::eUniformBuffer, 1000 },
+                    { vk::DescriptorType::eStorageBufferDynamic, 1000 },
+                    { vk::DescriptorType::eInputAttachment, 1000 }
+            };
+
+    vk::DescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = vk::StructureType::eDescriptorPoolCreateInfo;
+    pool_info.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = std::size(pool_sizes);
+    pool_info.pPoolSizes = pool_sizes;
+
+    vk::DescriptorPool imguiPool = device.createDescriptorPool(pool_info);
+
+    ImGui_ImplVulkan_InitInfo initInfo = {};
+    initInfo.Instance = instance;
+    initInfo.PhysicalDevice = physicalDevice;
+    initInfo.Device = device;
+    initInfo.Queue = graphicsQueue;
+    initInfo.DescriptorPool = imguiPool;
+    initInfo.MinImageCount = 3;
+    initInfo.ImageCount = 3;
+    initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+
+    ImGui_ImplVulkan_Init(&initInfo, renderpass.getRenderPass());
+
+    CommandBuffer cmd;
+    cmd.allocate(getCurrentFrame()->commandPool, true);
+    cmd.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    ImGui_ImplVulkan_CreateFontsTexture(cmd.getCommandBuffer());
+    cmd.end();
+    vk::SubmitInfo  submit;
+    submit.commandBufferCount = 1;
+    submit.pCommandBuffers = &cmd.getCommandBuffer();
+    submit.sType = vk::StructureType::eSubmitInfo;
+
+    graphicsQueue.submit(submit);
+
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+    //ImGUI Renderpass
+    //ImGUI Pipeline
+    //
+
+    mainDeletionQueue.push_function([=]() {
+
+        device.destroyDescriptorPool( imguiPool);
+        ImGui_ImplVulkan_Shutdown();
+    });
+
 }

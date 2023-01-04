@@ -183,6 +183,8 @@ public:
  */
     vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags);
     RenderPass renderpass;
+    void initImgui();
+
 private:
 
 
@@ -301,7 +303,6 @@ private:
      * \brief initialises surface.
      */
     void initSurface();
-
     /*!
      * \brief Sets the queue family indices .
      *

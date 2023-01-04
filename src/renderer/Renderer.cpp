@@ -7,6 +7,9 @@
 void Renderer::init() {
     VKRenderer::Get().init();
 }
+void Renderer::initUI() {
+    VKRenderer::Get().initImgui();
+}
 void Renderer::loadMeshes(std::vector<Renderable>* renderables){
     VKRenderer::Get().loadMeshes(renderables);
 }

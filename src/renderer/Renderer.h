@@ -22,6 +22,7 @@ public:
     }
 
     void init();
+    void initUI();
     void loadMeshes(std::vector<Renderable>* renderables);
     void draw(std::vector<Renderable>* renderables);
     void update();

@@ -8,6 +8,7 @@
 #include "VKRenderer.h"
 #include "Timer.h"
 #include "EditorController.h"
+#include "EditorView.h"
 
 
 void Application::init(std::string pAppName) {
@@ -21,6 +22,7 @@ void Application::init(std::string pAppName) {
     UI::Get().window.setCallbackFunction(callback);
     Renderer::Get().init();
     loadedScene.load();
+    editorView.init();
 }
 
 void Application::run() {
@@ -30,6 +32,7 @@ void Application::run() {
 
         UI::Get().window.update();
         loadedScene.update(dt);
+        editorView.render();
         loadedScene.draw();
     }
 }
@@ -41,5 +44,5 @@ void Application::close() {
 }
 
 void Application::onEvent(Event &e) {
-    editor.onEvent(e);
+    editorCtrl.onEvent(e);
 }

@@ -13,4 +13,4 @@ target_include_directories(vulkan_renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Vulkan REQUIRED)
 message(STATUS ${Vulkan_LIBRARY})
 
-target_link_libraries(vulkan_renderer scene_manager core ui application glm tinyobjloader glfw Vulkan::Vulkan)
+target_link_libraries(vulkan_renderer scene_manager core ui application glm tinyobjloader glfw Vulkan::Vulkan imgui)
