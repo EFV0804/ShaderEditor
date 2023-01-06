@@ -5,7 +5,6 @@
 #include "Application.h"
 #include "Core.h"
 #include "UI.h"
-#include "VKRenderer.h"
 #include "Timer.h"
 #include "EditorController.h"
 #include "EditorView.h"

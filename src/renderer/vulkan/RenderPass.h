@@ -29,7 +29,7 @@ public:
     void init();
 
     void initFramebuffers();
-
+    void initViewportFramebuffers();
     void cleanUp();
 
     void begin(const uint32_t &frameIndex, const vk::CommandBuffer &cmd);
@@ -37,12 +37,15 @@ public:
     void end(const vk::CommandBuffer &cmd);
 
     const vk::RenderPass &getRenderPass() const { return renderPass; }
-
+    const std::vector<vk::ImageView> getImageViews() const {return imageViews;}
+    DepthBufferImage depthBufferImage;
 private:
     vk::Format findDepthFormat();
 
     void createDepthBufferResources();
 
+    std::vector<vk::Image> viewportImages;
+    std::vector<vk::DeviceMemory> viewportImagesMemory;
     /*
      * A vector of framebuffers. A framebuffer references an image view for the swapchain that are used for color, depth and stencils.
      */
@@ -56,5 +59,5 @@ private:
     */
 
     std::vector<vk::ImageView> attachments;
-    DepthBufferImage depthBufferImage;
+//    DepthBufferImage depthBufferImage;
 };

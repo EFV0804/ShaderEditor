@@ -86,7 +86,6 @@ void RenderPass::init() {
 
     SE_RENDERER_DEBUG("RenderPass initialised and added to deletion queue");
 }
-
 void RenderPass::initFramebuffers() {
     SE_RENDERER_DEBUG("Frame buffers initialisation");
     createDepthBufferResources();
@@ -101,6 +100,104 @@ void RenderPass::initFramebuffers() {
     for (size_t i = 0; i < images.size(); ++i) {
 
         imageViews.emplace_back(renderer.createImageView(images.at(i),
+                                                         swapchain.getSwapchainImageFormat(),
+                                                         vk::ImageAspectFlagBits::eColor));
+
+        attachments = {imageViews.at(i), depthBufferImage.depthImageView};
+
+        vk::FramebufferCreateInfo framebufferCreateInfo = {};
+        framebufferCreateInfo.sType = vk::StructureType::eFramebufferCreateInfo;
+        framebufferCreateInfo.renderPass = renderPass;
+        framebufferCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferCreateInfo.pAttachments = attachments.data();
+        framebufferCreateInfo.width = swapchain.getSwapchainExtent().width;
+        framebufferCreateInfo.height = swapchain.getSwapchainExtent().height;
+        framebufferCreateInfo.layers = 1;
+        framebuffers.at(i) = renderer.device.createFramebuffer(framebufferCreateInfo);
+    }
+    SE_RENDERER_DEBUG("Frame buffers added to deletion queue");
+}
+void RenderPass::initViewportFramebuffers() {
+    SE_RENDERER_DEBUG("Frame buffers initialisation");
+    createDepthBufferResources();
+
+    VKRenderer &renderer = VKRenderer::Get();
+    const Swapchain &swapchain = renderer.swapchain;
+    std::vector<vk::Image> swapchainImages = renderer.device.getSwapchainImagesKHR(swapchain.getSwapchain());
+    viewportImages.resize(swapchainImages.size());
+    viewportImagesMemory.resize(swapchainImages.size());
+
+    for(int i =0; i< swapchainImages.size(); i++){
+
+
+        vk::ImageCreateInfo imageInfo{};
+        imageInfo.sType = vk::StructureType::eImageCreateInfo;
+        imageInfo.imageType = vk::ImageType::e2D;
+        imageInfo.extent.width = swapchain.getSwapchainExtent().width;
+        imageInfo.extent.height = swapchain.getSwapchainExtent().height;
+        imageInfo.extent.depth = 1;
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.format = vk::Format::eB8G8R8A8Unorm;
+        imageInfo.tiling = vk::ImageTiling::eOptimal;
+        imageInfo.initialLayout = vk::ImageLayout::eUndefined;
+        imageInfo.usage = vk::ImageUsageFlagBits::eColorAttachment /*|
+                          vk::ImageUsageFlagBits::eSampled*/;
+        imageInfo.samples = vk::SampleCountFlagBits::e1;
+        imageInfo.sharingMode = vk::SharingMode::eExclusive;
+
+//        viewportImages.at(i) = renderer.device.createImage(imageInfo);
+//
+    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+                                renderer.device.createImage(&imageInfo,
+                                                   nullptr,
+                                                   &viewportImages.at(i)) == vk::Result::eSuccess,
+                                "Failed to create image")
+
+        vk::MemoryRequirements memRequirements;
+        renderer.device.getImageMemoryRequirements(viewportImages.at(i), &memRequirements);
+
+        vk::MemoryAllocateInfo allocInfo{};
+        allocInfo.sType = vk::StructureType::eMemoryAllocateInfo;
+        allocInfo.allocationSize = memRequirements.size;
+        const std::vector<vk::MemoryPropertyFlagBits> flags{vk::MemoryPropertyFlagBits::eHostCoherent, vk::MemoryPropertyFlagBits::eHostVisible};
+//    allocInfo.memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits, flags);
+        allocInfo.memoryTypeIndex = renderer.getMemoryTypeIndex(flags);
+//        renderer.device.allocateMemory(&allocInfo, nullptr, &viewportImagesMemory.at(i));
+
+        SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+                                    renderer.device.allocateMemory(&allocInfo, nullptr, &viewportImagesMemory.at(i)) == vk::Result::eSuccess,
+                                    "Failed to allocate image");
+
+        renderer.device.bindImageMemory(viewportImages.at(i), viewportImagesMemory.at(i), 0);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+////        viewportImages.at(i) = VKRenderer::Get().createImage(
+////                swapchain.getSwapchainExtent().width,
+////                                              swapchain.getSwapchainExtent().height,
+////                                              renderer.swapchain.getSwapchainImageFormat(),
+////                                              vk::ImageTiling::eLinear,
+////                                              vk::ImageUsageFlagBits::eColorAttachment |
+////                                              vk::ImageUsageFlagBits::eSampled,
+////                                              vk::MemoryPropertyFlagBits::eHostCoherent,
+////                                              viewportImagesMemory.at(i));
+
+    }
+    imageViews.reserve(viewportImages.size());
+    framebuffers.resize(viewportImages.size());
+
+    for (size_t i = 0; i < viewportImages.size(); ++i) {
+
+        imageViews.emplace_back(renderer.createImageView(viewportImages.at(i),
                                                          swapchain.getSwapchainImageFormat(),
                                                          vk::ImageAspectFlagBits::eColor));
 
@@ -164,17 +261,15 @@ vk::Format RenderPass::findDepthFormat() {
             vk::FormatFeatureFlagBits::eDepthStencilAttachment
     );
 }
-
 void RenderPass::createDepthBufferResources() {
     VKRenderer &renderer = VKRenderer::Get();
     vk::Format depthFormat = findDepthFormat();
-    renderer.createImage(renderer.swapchain.getSwapchainExtent().width,
+    depthBufferImage.depthImage = renderer.createImage(renderer.swapchain.getSwapchainExtent().width,
                          renderer.swapchain.getSwapchainExtent().height,
                          depthFormat,
                          vk::ImageTiling::eOptimal,
                          vk::ImageUsageFlagBits::eDepthStencilAttachment,
                          vk::MemoryPropertyFlagBits::eDeviceLocal,
-                         depthBufferImage.depthImage,
                          depthBufferImage.depthImageMemory);
     depthBufferImage.depthImageView = renderer.createImageView(depthBufferImage.depthImage, depthFormat,
                                                                vk::ImageAspectFlagBits::eDepth);

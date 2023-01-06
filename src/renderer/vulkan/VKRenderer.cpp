@@ -30,6 +30,7 @@ int VKRenderer::init() {
         initCameraDescriptors();
         initCameraBuffers();
         createSynchronisation();
+        initTextureSampler();
     }
 
     catch (const std::runtime_error &e) {
@@ -80,6 +81,7 @@ void VKRenderer::draw(std::vector<Renderable> *renderables) {
     ImDrawData* UIdrawData = ImGui::GetDrawData();
     ImGui_ImplVulkan_RenderDrawData(UIdrawData,
                                     getCurrentFrame()->commandBuffer.getCommandBuffer());
+
 
 //******************--- RENDER PASS ENDS ---*****************//
     renderpass.end(getCurrentFrame()->commandBuffer.getCommandBuffer());
@@ -822,6 +824,7 @@ uint32_t VKRenderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlag
         vk::MemoryType memoryType = memoryProperties.memoryTypes[currentMemoryTypeIndex];
         if (std::all_of(flags.begin(), flags.end(),
                         [&memoryType](vk::MemoryPropertyFlagBits flag) { return flag & memoryType.propertyFlags; })) {
+            SE_RENDERER_DEBUG("Found matching Memory Type");
             return currentMemoryTypeIndex;
         } else {
             SE_RENDERER_DEBUG("No matching memory types");
@@ -831,9 +834,9 @@ uint32_t VKRenderer::getMemoryTypeIndex(const std::vector<vk::MemoryPropertyFlag
     return memoryTypeIndex;
 }
 
-void VKRenderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling,
-                             vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties, vk::Image &image,
-                             vk::DeviceMemory &imageMemory) {
+vk::Image VKRenderer::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling,
+                                  vk::ImageUsageFlags usage, vk::MemoryPropertyFlagBits properties,
+                                  vk::DeviceMemory &imageMemory) {
     vk::ImageCreateInfo imageInfo{};
     imageInfo.sType = vk::StructureType::eImageCreateInfo;
     imageInfo.imageType = vk::ImageType::e2D;
@@ -849,14 +852,16 @@ void VKRenderer::createImage(uint32_t width, uint32_t height, vk::Format format,
     imageInfo.samples = vk::SampleCountFlagBits::e1;
     imageInfo.sharingMode = vk::SharingMode::eExclusive;
 
-    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
-                                device.createImage(&imageInfo,
-                                                   nullptr,
-                                                   &image) == vk::Result::eSuccess,
-                                "Failed to create image")
+    vk::Image im = device.createImage(imageInfo);
+
+//    SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,
+//                                device.createImage(&imageInfo,
+//                                                   nullptr,
+//                                                   &image) == vk::Result::eSuccess,
+//                                "Failed to create image")
 
     vk::MemoryRequirements memRequirements;
-    device.getImageMemoryRequirements(image, &memRequirements);
+    device.getImageMemoryRequirements(im, &memRequirements);
 
     vk::MemoryAllocateInfo allocInfo{};
     allocInfo.sType = vk::StructureType::eMemoryAllocateInfo;
@@ -869,7 +874,9 @@ void VKRenderer::createImage(uint32_t width, uint32_t height, vk::Format format,
                                 device.allocateMemory(&allocInfo, nullptr, &imageMemory) == vk::Result::eSuccess,
                                 "Failed to allocate image");
 
-    device.bindImageMemory(image, imageMemory, 0);
+    device.bindImageMemory(im, imageMemory, 0);
+
+    return im;
 }
 
 void VKRenderer::initImgui() {
@@ -934,4 +941,51 @@ void VKRenderer::initImgui() {
         ImGui_ImplVulkan_Shutdown();
     });
 
+}
+void VKRenderer::createTextureImage(const uint32_t& imageSize){
+
+    Buffer stagingBuffer{vk::BufferUsageFlagBits::eTransferSrc, imageSize,vk::SharingMode::eExclusive};
+}
+//void VKRenderer::initViewport() {
+//
+//    createViewportImages();
+//    //RENDERPASS
+//
+//    //
+//}
+//void VKRenderer::createViewportImages() {
+//
+//}
+std::vector<vk::DescriptorSet> VKRenderer::getViewportImageViews() {
+
+//    ds.resize(renderpass.getImageViews().size());
+//    for(int i = 0; i < renderpass.getImageViews().size(); i++){
+//        ds.at(i) = ImGui_ImplVulkan_AddTexture(textureSampler, renderpass.getImageViews().at(i),
+//                                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+//    }
+    ds.resize(1);
+    ds.at(0) = ImGui_ImplVulkan_AddTexture(textureSampler, renderpass.depthBufferImage.depthImageView,
+                                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    return ds;
+}
+
+void VKRenderer::initTextureSampler() {
+    vk::SamplerCreateInfo samplerCreateInfo{};
+    samplerCreateInfo.sType = vk::StructureType::eSamplerCreateInfo;
+    samplerCreateInfo.magFilter = vk::Filter::eLinear;
+    samplerCreateInfo.minFilter = vk::Filter::eLinear;
+    samplerCreateInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
+    samplerCreateInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
+    samplerCreateInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+    samplerCreateInfo.anisotropyEnable = VK_FALSE;
+    samplerCreateInfo.maxAnisotropy = 1.0f;
+    samplerCreateInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+    samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerCreateInfo.compareEnable = VK_FALSE;
+    samplerCreateInfo.compareOp = vk::CompareOp::eAlways;
+    samplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    samplerCreateInfo.mipLodBias = 0.0f;
+    samplerCreateInfo.minLod = 0.0f;
+    samplerCreateInfo.maxLod = 0.0f;
+    textureSampler = device.createSampler(samplerCreateInfo);
 }

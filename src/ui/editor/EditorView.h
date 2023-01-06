@@ -2,6 +2,7 @@
 // Created by elise.vidal on 12/16/2022.
 //
 #include <imgui.h>
+#include "Viewport.h"
 #ifndef SHADEREDITOR_EDITORVIEW_H
 #define SHADEREDITOR_EDITORVIEW_H
 
@@ -18,6 +19,9 @@ public:
 
     void init();
     void render();
+
+private:
+    Viewport viewport;
 
 };
 

@@ -23,6 +23,7 @@ public:
 
     void init();
     void initUI();
+    void initViewport();
     void loadMeshes(std::vector<Renderable>* renderables);
     void draw(std::vector<Renderable>* renderables);
     void update();
@@ -31,4 +32,6 @@ public:
     void close();
 
     int getCurrentFrame(){return VKRenderer::Get().currentFrame;} //TODO:make it adaptable
+    template<class T>
+            T getViewportImages() const {return VKRenderer::Get().getViewportImageViews();}
 };
