@@ -32,6 +32,17 @@ public:
      * \note This function is to be added to the main deletion queue.
      */
     void cleanUp();
+    /*!
+ * \brief Reads binary code from shader file found at the location of fileName
+ * \return std::vector<char> shader code
+ */
+    std::vector<char> getShaderCode();
+    /*!
+     * \brief makes vk::ShaderModule
+     * \return vk::ShaderModule
+     * \note Must be called after the shader code has been read and stored in member variable shaderCode.
+     */
+    vk::ShaderModule makeModule();
 private:
 
     /*
@@ -50,16 +61,16 @@ private:
      * Shader Module that holds all information about the shader, used by the pipeline initialisation process.
      */
     vk::ShaderModule module;
-    /*!
-     * \brief Reads binary code from shader file found at the location of fileName
-     * \return std::vector<char> shader code
-     */
-    std::vector<char> getShaderCode();
-    /*!
-     * \brief makes vk::ShaderModule
-     * \return vk::ShaderModule
-     * \note Must be called after the shader code has been read and stored in member variable shaderCode.
-     */
-    vk::ShaderModule makeModule();
+//    /*!
+//     * \brief Reads binary code from shader file found at the location of fileName
+//     * \return std::vector<char> shader code
+//     */
+//    std::vector<char> getShaderCode();
+//    /*!
+//     * \brief makes vk::ShaderModule
+//     * \return vk::ShaderModule
+//     * \note Must be called after the shader code has been read and stored in member variable shaderCode.
+//     */
+//    vk::ShaderModule makeModule();
 
 };

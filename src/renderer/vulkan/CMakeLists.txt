@@ -5,7 +5,7 @@ message("generating vulkan renderer")
 #message(${ENGINE_SRC_FILES})
 
 # make renderer library
-add_library(vulkan_renderer STATIC ${VULKAN_RENDERER_SRC_FILES} Pipeline.cpp)
+add_library(vulkan_renderer STATIC ${VULKAN_RENDERER_SRC_FILES} Pipeline.cpp ComputePipeline.cpp ComputePipeline.h ComputeShader.cpp ComputeShader.h)
 # include current source to library
 target_include_directories(vulkan_renderer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 

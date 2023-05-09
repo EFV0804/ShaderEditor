@@ -13,6 +13,7 @@ pipeline()
 
 void Pipeline::cleanUp() const {
     VKRenderer::Get().device.destroyDescriptorSetLayout(descriptorSetLayout);
+    VKRenderer::Get().device.destroyDescriptorSetLayout(descriptorSetLayout);
     VKRenderer::Get().device.destroyPipelineLayout(pipelineLayout);
     VKRenderer::Get().device.destroyPipeline(pipeline);
 }

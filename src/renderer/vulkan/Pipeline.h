@@ -23,9 +23,12 @@ public:
      */
     const vk::Pipeline & getPipeline() const {return pipeline;}
     const vk::PipelineLayout & getPipelineLayout() const {return pipelineLayout;}
+    const vk::DescriptorSet& getDsescriptorSet() const {return descriptorSet;}
+    const vk::DescriptorSetLayout& getDescriptorSetLayout() const {return descriptorSetLayout;}
     void SetPipeline(vk::Pipeline pipelineP){pipeline = pipelineP;}
     void SetPipelineLayout(vk::PipelineLayout pipelineLayoutP){pipelineLayout = pipelineLayoutP;}
     void SetDescriptorSet(vk::DescriptorSet descriptorSetP){descriptorSet = descriptorSetP;}
+    void SetDescriptorSetLayout(vk::DescriptorSetLayout descriptorSetLayoutP){descriptorSetLayout = descriptorSetLayoutP;}
 
      /*!
      * \brief Calls Vulkan function to destroy vk::Pipeline and vk::PipelineLayout
