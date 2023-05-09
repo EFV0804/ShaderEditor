@@ -2,15 +2,14 @@
 #include "VKRenderer.h"
 #include "Mesh.h"
 
-GraphicsPipeline::GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages, std::vector<vk::PushConstantRange>& pushConstants) :
-pipelineLayout(),
-graphicsPipeline()
+GraphicsPipeline::GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages, std::vector<vk::PushConstantRange>& pushConstants)
 {
-    createGraphicsPipeline(stages, pushConstants);
+
+    createPipeline(stages, pushConstants);
 }
 
 
-void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages,
+void GraphicsPipeline::createPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages,
                                               std::vector<vk::PushConstantRange> pushConstants)
 {
 
@@ -116,7 +115,7 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
     layoutInfo.pushConstantRangeCount = pushConstants.size();
     layoutInfo.pPushConstantRanges = pushConstants.data();
 
-    pipelineLayout = VKRenderer::Get().device.createPipelineLayout(layoutInfo);
+    SetPipelineLayout(VKRenderer::Get().device.createPipelineLayout(layoutInfo));
 
     vk::GraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = vk::StructureType::eGraphicsPipelineCreateInfo;
@@ -130,24 +129,26 @@ void GraphicsPipeline::createGraphicsPipeline(std::vector<vk::PipelineShaderStag
     pipelineInfo.pMultisampleState = &multisamplingInfo;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.layout = getPipelineLayout();
     pipelineInfo.renderPass = VKRenderer::Get().renderpass.getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    vk::Result result = VKRenderer::Get().device.createGraphicsPipelines(VK_NULL_HANDLE,
-                                                                         1,
-                                                                         &pipelineInfo,
-                                                                         nullptr,
-                                                                         &graphicsPipeline);
+    vk::Pipeline pipeline{};
+    auto result = VKRenderer::Get().device.createGraphicsPipelines(VK_NULL_HANDLE,
+                                                                     1,
+                                                                     &pipelineInfo,
+                                                                     nullptr,
+                                                                     &pipeline);
 
+    if(result == vk::Result::eSuccess){
+        SetPipeline(pipeline);
+    }
     SE_INTERNAL_ASSERT_WITH_MSG(_RENDERER_,result == vk::Result::eSuccess, "Pipeline initialisation failed." );
 
 
 }
 
 void GraphicsPipeline::cleanUp() const {
-    VKRenderer::Get().device.destroyDescriptorSetLayout(descriptorSetLayout);
-    VKRenderer::Get().device.destroyPipelineLayout(pipelineLayout);
-    VKRenderer::Get().device.destroyPipeline(graphicsPipeline);
+    Pipeline::cleanUp();
 }

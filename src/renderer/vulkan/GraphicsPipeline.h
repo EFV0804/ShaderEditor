@@ -1,10 +1,12 @@
 #pragma once
 #include <vulkan/vulkan.hpp>
 #include <vector>
+#include "Pipeline.h"
 
 class VKRenderer;
 
-class GraphicsPipeline
+class GraphicsPipeline:
+    public Pipeline
 {
 public:
     GraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages, std::vector<vk::PushConstantRange>& pushConstants);
@@ -13,33 +15,14 @@ public:
 	~GraphicsPipeline() = default;
 
     /*!
-     * \brief Getter function for vk::Pipeline member var.
-     * \return vk::Pipeline
-     */
-    const vk::Pipeline& getPipeline() const {return graphicsPipeline;}
-    const vk::PipelineLayout& getLayout() const {return pipelineLayout;}
-    /*!
      * \brief Calls Vulkan function to destroy vk::Pipeline and vk::PipelineLayout
      * \param renderer
      */
-    void cleanUp() const;
+     void cleanUp() const override;
 
 private:
-    /*
-     * Pipeline Layout, allows to specify uniforms, push constants in shader code.
-     * //TODO Create vk::PipelineLayout based uniforms present in shader code. Using SPIRV-Cross
-     */
-	vk::PipelineLayout pipelineLayout;
-    vk::DescriptorSetLayout descriptorSetLayout;
-    vk::DescriptorSet descriptorSet;
-    /*
-     * The pipeline :)
-     */
-	vk::Pipeline graphicsPipeline;
-
-    void createGraphicsPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages,
+    void createPipeline(std::vector<vk::PipelineShaderStageCreateInfo> &stages,
                                 std::vector<vk::PushConstantRange> pushConstants);
-
 
 };
 

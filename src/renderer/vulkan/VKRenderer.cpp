@@ -129,7 +129,7 @@ void VKRenderer::drawRenderables(std::vector<Renderable> *renderables) {
                                                                              current_mat->pipeline.getPipeline());
             //TODO add semaphores to make sure camera buffer is not in use before copying or are frame semaphores enough?
             getCurrentFrame()->commandBuffer.getCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                                                                   current_mat->pipeline.getLayout(),
+                                                                                   current_mat->pipeline.getPipelineLayout(),
                                                                                    0,
                                                                                    1,
                                                                                    &getCurrentFrame()->cameraDescriptorSet,
@@ -142,7 +142,7 @@ void VKRenderer::drawRenderables(std::vector<Renderable> *renderables) {
         //Push constants
         for (auto constant: renderables->at(i).getMaterial()->getPushConstants()) {
             getCurrentFrame()->commandBuffer.getCommandBuffer().pushConstants(
-                    renderables->at(i).getMaterial()->pipeline.getLayout(),
+                    renderables->at(i).getMaterial()->pipeline.getPipelineLayout(),
                     constant.stageFlags,
                     constant.offset,
                     constant.size,
